@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>تسجيل الدخول | KlikShop</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="center-screen">
+    <div class="login-card card">
+      <div class="logo">🛍️</div>
+      <h1>KlikShop</h1>
+      <p class="muted">سجّل دخولك لإدارة متجرك</p>
+      <div id="note" class="note" hidden></div>
+      <form id="loginForm">
+        <label for="email">الإيميل</label>
+        <input type="email" id="email" required dir="ltr" autocomplete="username">
+        <label for="password">الباسورد</label>
+        <input type="password" id="password" required autocomplete="current-password">
+        <button class="btn" id="loginBtn" type="submit">دخول</button>
+      </form>
+      <button class="btn btn-outline" id="forgotBtn" type="button">نسيت الباسورد؟</button>
+      <a class="back" href="index.html">← الرئيسية</a>
+    </div>
+  </main>
+  <script type="module" src="login.js"></script>
+</body>
+</html>

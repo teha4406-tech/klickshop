@@ -1,0 +1,182 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ================= دوال مساعدة =================
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    // المدير العام: وثيقة باسمه (uid) داخل platformAdmins.
+    // الوثيقة دي بتتعمل يدويًا من Firebase Console بس، ومفيش حد يقدر يكتبها من الموقع.
+    function isSuperAdmin() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/platformAdmins/$(request.auth.uid));
+    }
+
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    // صاحب محل: وثيقته في users دورها store_owner وحسابه شغّال
+    function isActiveOwner() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && userDoc().role == 'store_owner'
+        && userDoc().active == true;
+    }
+
+    function storeExists(storeId) {
+      return exists(/databases/$(database)/documents/stores/$(storeId));
+    }
+    function storeOf(storeId) {
+      return get(/databases/$(database)/documents/stores/$(storeId)).data;
+    }
+
+    // صاحب المحل بيملك المتجر ده، وحسابه والمتجر شغّالين
+    function ownsStore(storeId) {
+      return isActiveOwner()
+        && storeExists(storeId)
+        && storeOf(storeId).ownerUid == request.auth.uid
+        && storeOf(storeId).active == true;
+    }
+
+    // ================= دوال التحقق من شكل البيانات =================
+    function validCategory(d) {
+      return d.keys().hasOnly(['storeId', 'name', 'order', 'active', 'createdAt'])
+        && d.name is string && d.name.size() > 0 && d.name.size() <= 80;
+    }
+
+    function validProduct(d) {
+      return d.keys().hasOnly(['storeId', 'name', 'description', 'price', 'oldPrice', 'categoryId',
+                               'sizes', 'colors', 'active', 'featured', 'stock', 'sku', 'order',
+                               'thumb', 'imageCount', 'createdAt', 'updatedAt'])
+        && d.name is string && d.name.size() > 0 && d.name.size() <= 120
+        && d.price is number && d.price >= 0
+        && d.get('thumb', '').size() <= 60000;
+    }
+
+    function validImages(d) {
+      return d.keys().hasOnly(['storeId', 'productId', 'images'])
+        && d.images is list && d.images.size() <= 6;
+    }
+
+    function validOrder(d) {
+      return d.keys().hasOnly(['storeId', 'customerName', 'customerPhone', 'items', 'total', 'note', 'status', 'createdAt'])
+        && d.keys().hasAll(['storeId', 'customerName', 'customerPhone', 'items', 'total', 'status', 'createdAt'])
+        && d.storeId is string
+        && d.customerName is string && d.customerName.size() > 0 && d.customerName.size() <= 80
+        && d.customerPhone is string && d.customerPhone.size() >= 6 && d.customerPhone.size() <= 20
+        && d.items is list && d.items.size() >= 1 && d.items.size() <= 50
+        && d.total is number && d.total >= 0
+        && d.get('note', '').size() <= 500
+        && d.status == 'new'
+        && d.createdAt == request.time;
+    }
+
+    // ================= المدير العام =================
+    match /platformAdmins/{uid} {
+      allow read: if signedIn() && request.auth.uid == uid;   // يقدر يشوف وثيقته هو بس
+      allow write: if false;                                   // مفيش كتابة من الموقع نهائيًا
+    }
+
+    // ================= المستخدمين (أدوار الحسابات) =================
+    // المستخدم يقرا وثيقته بس. إنشاء وتعديل وحذف الحسابات للمدير العام بس،
+    // يعني محدش يقدر يغيّر دوره بنفسه أو يرقّي نفسه.
+    match /users/{uid} {
+      allow read: if signedIn() && (request.auth.uid == uid || isSuperAdmin());
+      allow create, update: if isSuperAdmin() && request.resource.data.role == 'store_owner';
+      allow delete: if isSuperAdmin();
+    }
+
+    // ================= المتاجر =================
+    match /stores/{storeId} {
+      // الكتالوج العام: أي حد يقرا المتاجر الشغّالة. صاحب المتجر يقرا متجره حتى لو موقوف.
+      allow read: if isSuperAdmin()
+        || resource.data.get('active', false) == true
+        || (signedIn() && resource.data.get('ownerUid', '') == request.auth.uid);
+      allow create, delete: if isSuperAdmin();
+      allow update: if isSuperAdmin()
+        || (isActiveOwner()
+            && resource.data.ownerUid == request.auth.uid
+            && resource.data.active == true
+            // صاحب المحل يعدّل بيانات العرض بس، مش ownerUid ولا active ولا slug ولا الباقة
+            && request.resource.data.diff(resource.data).affectedKeys()
+                 .hasOnly(['name', 'description', 'whatsapp', 'phone', 'address',
+                           'instagram', 'facebook', 'tiktok', 'logo', 'theme']));
+    }
+
+    // ================= التصنيفات =================
+    match /categories/{id} {
+      allow read: if isSuperAdmin()
+        || resource.data.get('active', false) == true
+        || (signedIn() && ownsStore(resource.data.storeId));
+      allow create: if isSuperAdmin()
+        || (ownsStore(request.resource.data.storeId) && validCategory(request.resource.data));
+      allow update: if isSuperAdmin()
+        || (ownsStore(resource.data.storeId)
+            && request.resource.data.storeId == resource.data.storeId
+            && validCategory(request.resource.data));
+      allow delete: if isSuperAdmin() || ownsStore(resource.data.storeId);
+    }
+
+    // ================= المنتجات =================
+    match /products/{id} {
+      allow read: if isSuperAdmin()
+        || resource.data.get('active', false) == true
+        || (signedIn() && ownsStore(resource.data.storeId));
+      allow create: if isSuperAdmin()
+        || (ownsStore(request.resource.data.storeId) && validProduct(request.resource.data));
+      allow update: if isSuperAdmin()
+        || (ownsStore(resource.data.storeId)
+            && request.resource.data.storeId == resource.data.storeId
+            && validProduct(request.resource.data));
+      allow delete: if isSuperAdmin() || ownsStore(resource.data.storeId);
+    }
+
+    // ================= صور المنتجات (مضغوطة داخل Firestore) =================
+    match /productImages/{productId} {
+      allow read: if true;   // الصور عامة زي الكتالوج
+      allow create: if isSuperAdmin()
+        || (ownsStore(request.resource.data.storeId) && validImages(request.resource.data));
+      allow update: if isSuperAdmin()
+        || (ownsStore(resource.data.storeId)
+            && request.resource.data.storeId == resource.data.storeId
+            && validImages(request.resource.data));
+      allow delete: if isSuperAdmin() || ownsStore(resource.data.storeId);
+    }
+
+    // ================= الطلبات =================
+    match /orders/{orderId} {
+      // صاحب المتجر يشوف طلبات متجره بس، والمدير العام يشوف الكل. العميل مش بيقرا.
+      allow read: if isSuperAdmin() || (signedIn() && ownsStore(resource.data.storeId));
+      // أي زبون يقدر يبعت طلب جديد لمتجر شغّال (بشروط صارمة)
+      allow create: if validOrder(request.resource.data)
+        && storeExists(request.resource.data.storeId)
+        && storeOf(request.resource.data.storeId).active == true;
+      // صاحب المتجر يغيّر حالة الطلب بس
+      allow update: if isSuperAdmin()
+        || (ownsStore(resource.data.storeId)
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+            && request.resource.data.status in ['new', 'confirmed', 'shipped', 'delivered', 'cancelled']);
+      allow delete: if isSuperAdmin();
+    }
+
+    // ================= الباقات والاشتراكات وإعدادات المنصة =================
+    match /plans/{planId} {
+      allow read: if true;
+      allow write: if isSuperAdmin();
+    }
+    match /subscriptions/{storeId} {
+      allow read: if isSuperAdmin()
+        || (signedIn() && storeExists(storeId) && storeOf(storeId).ownerUid == request.auth.uid);
+      allow write: if isSuperAdmin();
+    }
+    match /platformSettings/{docId} {
+      allow read: if true;
+      allow write: if isSuperAdmin();
+    }
+
+    // أي حاجة تانية: ممنوعة تلقائيًا
+  }
+}
