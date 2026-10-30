@@ -4,6 +4,8 @@ import { onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/
 import { doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 
 export const esc = s => { const d = document.createElement('div'); d.textContent = s ?? ''; return d.innerHTML; };
+// للنصوص اللي بتتحط جوه خصائص HTML زي value="..."
+export const escA = s => esc(s).replace(/"/g, '&quot;');
 
 // بيرجّع دور المستخدم من قاعدة البيانات (مش من المتصفح):
 // - super_admin: لو فيه وثيقة باسمه في platformAdmins (بتتعمل يدويًا من Firebase Console بس)

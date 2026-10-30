@@ -12,27 +12,54 @@
       <div class="brand">🛍️ KlikShop <span class="badge">المدير العام</span></div>
       <div class="who"><span id="who"></span><button class="btn btn-sm btn-outline" id="logoutBtn" type="button" style="margin:0">خروج</button></div>
     </header>
+    <nav class="tabs" id="tabs">
+      <button type="button" data-tab="dash" class="active">📊 الرئيسية</button>
+      <button type="button" data-tab="stores">🏪 المتاجر</button>
+      <button type="button" data-tab="owners">👤 أصحاب المحلات</button>
+    </nav>
     <main class="container">
-      <h1>لوحة تحكم المنصة</h1>
-      <p class="muted">✅ صلاحية المدير العام مفعّلة على حسابك.</p>
-      <div class="grid">
-        <div class="stat"><b id="cStores">…</b><span>كل المتاجر</span></div>
-        <div class="stat"><b id="cActive">…</b><span>متاجر شغّالة</span></div>
-        <div class="stat"><b id="cOwners">…</b><span>حسابات أصحاب المحلات</span></div>
-        <div class="stat"><b id="cProducts">…</b><span>المنتجات</span></div>
-        <div class="stat"><b id="cOrders">…</b><span>الطلبات</span></div>
-      </div>
-      <div class="card">
-        <h2>الأقسام القادمة</h2>
-        <ul class="soon">
-          <li>🏪 إدارة المتاجر وأصحابها (المرحلة 2)</li>
-          <li>📦 المنتجات والتصنيفات والطلبات (المرحلة 3)</li>
-          <li>🌐 كتالوج العملاء وسلة واتساب (المرحلة 4)</li>
-          <li>💳 الباقات والاشتراكات والتقارير (المرحلة 5)</li>
-        </ul>
-      </div>
+      <section id="tab-dash" class="tab active">
+        <h1>لوحة تحكم المنصة</h1>
+        <p class="muted">✅ صلاحية المدير العام مفعّلة على حسابك.</p>
+        <div class="grid">
+          <div class="stat"><b id="cStores">…</b><span>كل المتاجر</span></div>
+          <div class="stat"><b id="cActive">…</b><span>متاجر شغّالة</span></div>
+          <div class="stat"><b id="cOwners">…</b><span>أصحاب المحلات</span></div>
+          <div class="stat"><b id="cProducts">…</b><span>المنتجات</span></div>
+          <div class="stat"><b id="cOrders">…</b><span>الطلبات</span></div>
+        </div>
+        <div class="card">
+          <h2>🔒 اختبار الأمان</h2>
+          <p class="muted">صفحة بتجرّب قواعد Firebase على حسابك الحالي وتقولك إيه الممنوع وإيه المسموح.</p>
+          <p style="margin-top:.8rem"><a class="btn btn-sm" href="security-test.html" style="display:inline-block">افتح صفحة الاختبار</a></p>
+        </div>
+      </section>
+
+      <section id="tab-stores" class="tab">
+        <div class="bar"><h2>المتاجر</h2><button class="btn btn-sm" id="addStoreBtn" type="button">➕ متجر جديد</button></div>
+        <div id="storesList" class="list"></div>
+      </section>
+
+      <section id="tab-owners" class="tab">
+        <div class="bar"><h2>أصحاب المحلات</h2><button class="btn btn-sm" id="addOwnerBtn" type="button">➕ صاحب محل جديد</button></div>
+        <div id="ownersList" class="list"></div>
+      </section>
     </main>
   </div>
+
+  <div class="modal" id="modal" hidden>
+    <div class="modal-box" role="dialog" aria-modal="true">
+      <h2 id="mTitle"></h2>
+      <p class="muted" id="mMsg" hidden></p>
+      <div id="mFields"></div>
+      <div class="note err" id="mError" hidden></div>
+      <div class="row">
+        <button class="btn" id="mOk" type="button">حفظ</button>
+        <button class="btn btn-outline" id="mCancel" type="button">إلغاء</button>
+      </div>
+    </div>
+  </div>
+  <div class="toast" id="toast" hidden></div>
   <script type="module" src="admin.js"></script>
 </body>
 </html>

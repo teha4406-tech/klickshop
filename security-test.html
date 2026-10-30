@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>اختبار الأمان | KlikShop</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="loading">
+  <div class="page">
+    <header class="topbar">
+      <div class="brand">🔒 اختبار قواعد الأمان</div>
+      <div class="who"><span id="who"></span><a href="login.html" id="backLink">رجوع</a></div>
+    </header>
+    <main class="container">
+      <div class="card">
+        <h2>إزاي الاختبار بيشتغل؟</h2>
+        <p class="muted">الصفحة بتجرّب عمليات حقيقية على Firebase بحسابك الحالي: اللي المفروض يتمنع لازم يترفض، واللي المفروض يتسمح لازم ينجح. العمليات التجريبية بتتمسح تلقائي.</p>
+        <ul class="soon">
+          <li>جرّبها وإنت داخل بحساب <b>المدير العام</b>.</li>
+          <li>وجرّبها تاني وإنت داخل بحساب <b>صاحب محل</b>. ولازم يكون فيه <b>متجرين شغّالين</b> على الأقل (متجر ليه ومتجر لحد تاني).</li>
+        </ul>
+        <button class="btn" id="runBtn" type="button" style="margin-top:1rem">▶️ شغّل الاختبار</button>
+      </div>
+      <div id="summary" class="note" hidden style="margin-bottom:1rem"></div>
+      <div id="results"></div>
+    </main>
+  </div>
+  <script type="module" src="security-test.js"></script>
+</body>
+</html>
