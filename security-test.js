@@ -1,9 +1,10 @@
 // صفحة اختبار قواعد Firestore من الموبايل: بتجرّب عمليات حقيقية وبتقارن النتيجة بالمتوقع.
-import { auth, db } from './firebase-config.js';
+import { auth, db, firebaseConfig } from './firebase-config.js';
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
 import { loadRole, esc } from './app.js';
 import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import {
-  doc, collection, getDoc, getDocs, setDoc, updateDoc, deleteDoc,
+  initializeFirestore, doc, collection, getDoc, getDocs, setDoc, updateDoc, deleteDoc,
   query, where, limit, serverTimestamp
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 
@@ -119,6 +120,44 @@ async function ownerSuite(user) {
   await T('قراءة طلبات متجر شخص تاني', false, () => getDocs(query(collection(db, 'orders'), where('storeId', '==', otherId), limit(1))));
   await T('قراءة اشتراك متجر شخص تاني', false, () => getDoc(doc(db, 'subscriptions', otherId)));
 }
+
+// زائر من غير تسجيل دخول: نسخة Firebase تانية مفيهاش مستخدم
+async function guestSuite() {
+  const g = initializeFirestore(initializeApp(firebaseConfig, 'guest-' + Date.now()), { experimentalAutoDetectLongPolling: true });
+  const st = (await getDocs(query(collection(g, 'stores'), where('active', '==', true), limit(1)))).docs[0];
+  rows.push({ name: 'قراءة المتاجر الشغّالة (عام)', wantAllow: true, allowed: true, code: '', ok: true });
+  if (!st) { skip('اختبارات الزائر على متجر', 'مفيش متجر شغّال'); return; }
+  const sid = st.id;
+  const order = extra => ({
+    storeId: sid, customerName: 'اختبار', customerPhone: '01000000000',
+    items: [{ n: 1 }], total: 1, status: 'new', createdAt: serverTimestamp(), ...extra
+  });
+  await T('قراءة المنتجات الظاهرة (active==true)', true, () => getDocs(query(collection(g, 'products'), where('storeId', '==', sid), where('active', '==', true), limit(1))));
+  await T('قراءة كل المنتجات من غير فلتر الظهور (المخفية محمية)', false, () => getDocs(query(collection(g, 'products'), where('storeId', '==', sid), limit(1))));
+  await T('قراءة الطلبات', false, () => getDocs(query(collection(g, 'orders'), limit(1))));
+  await T('قراءة الحسابات', false, () => getDocs(query(collection(g, 'users'), limit(1))));
+  await T('قراءة platformAdmins', false, () => getDoc(doc(g, 'platformAdmins', 'x')));
+  await T('قراءة الاشتراكات', false, () => getDoc(doc(g, 'subscriptions', sid)));
+  await T('قراءة الباقات (عام)', true, () => getDocs(query(collection(g, 'plans'), limit(1))));
+  await T('كتابة منتج', false, () => setDoc(doc(g, 'products', 'zz-guest'), { storeId: sid, name: 'x', price: 1 }));
+  await T('تعديل متجر', false, () => updateDoc(doc(g, 'stores', sid), { name: 'hack' }));
+  await T('كتابة في الباقات', false, () => setDoc(doc(g, 'plans', 'zz-guest'), { x: 1 }));
+  await T('طلب بحالة غير new', false, () => setDoc(doc(collection(g, 'orders')), order({ status: 'confirmed' })));
+  await T('طلب من غير منتجات', false, () => setDoc(doc(collection(g, 'orders')), order({ items: [] })));
+  await T('طلب بوقت مزيف (مش وقت السيرفر)', false, () => setDoc(doc(collection(g, 'orders')), order({ createdAt: new Date() })));
+  await T('طلب لمتجر مش موجود', false, () => setDoc(doc(collection(g, 'orders')), order({ storeId: 'zz-not-exist' })));
+  await T('طلب بحقل زيادة مش مسموح', false, () => setDoc(doc(collection(g, 'orders')), order({ hacked: true })));
+}
+
+$('guestBtn').addEventListener('click', async () => {
+  rows.length = 0;
+  render();
+  $('guestBtn').disabled = true;
+  $('runBtn').disabled = true;
+  try { await guestSuite(); render(); } catch (e) { skip('الاختبار وقف بسبب خطأ', String((e && e.code) || e)); }
+  $('guestBtn').disabled = false;
+  $('runBtn').disabled = false;
+});
 
 $('runBtn').addEventListener('click', async () => {
   if (!current) return;
