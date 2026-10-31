@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>لوحة صاحب المحل | KlikShop</title>
   <link rel="stylesheet" href="style.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#4f46e5">
+  <link rel="apple-touch-icon" href="icon-192.png">
 </head>
 <body class="loading">
   <div class="page">
@@ -37,6 +40,7 @@
               <button class="btn btn-sm" id="copyBtn" type="button">نسخ</button>
             </div>
           </div>
+          <div class="card" id="subBox" hidden></div>
           <p style="margin:.6rem 0"><a href="security-test.html">🔒 اختبار الأمان</a></p>
         </div>
       </section>
@@ -135,5 +139,6 @@
   </div>
   <div class="toast" id="toast" hidden></div>
   <script type="module" src="dashboard.js"></script>
+  <script type="module" src="pwa.js"></script>
 </body>
 </html>

@@ -22,6 +22,7 @@ let editingId = null;
 let busy = false;
 let logoData = '';
 let formFilled = false;
+let sub = null;
 
 /* ---------- أدوات ---------- */
 const fmtPrice = n => Number(n || 0).toLocaleString('ar-EG') + ' ج.م';
@@ -58,6 +59,22 @@ function renderHome() {
   $('homeStats').hidden = false;
   $('catalogLink').value = new URL('store.html?s=' + encodeURIComponent(storeId), location.href).href;
 }
+function renderSub() {
+  const b = $('subBox');
+  if (!sub) { b.hidden = true; return; }
+  const end = sub.endsAt && sub.endsAt.toDate ? sub.endsAt.toDate() : null;
+  const days = end ? Math.ceil((end.getTime() - Date.now()) / 86400000) : null;
+  let state = '🟢 نشط';
+  if (sub.status === 'expired' || (days !== null && days < 0)) state = '⛔ منتهي';
+  else if (sub.status === 'trial') state = '🧪 تجريبي';
+  else if (days !== null && days <= 7) state = '⚠️ قرب ينتهي';
+  const day = end ? end.getFullYear() + '-' + String(end.getMonth() + 1).padStart(2, '0') + '-' + String(end.getDate()).padStart(2, '0') : '';
+  b.hidden = false;
+  b.innerHTML = '<h2>💳 اشتراكك</h2><p><b>' + esc(sub.planName || '') + '</b> — ' + state + '</p>' +
+    (end ? '<p class="muted">ينتهي في ' + day + (days >= 0 ? ' (باقي ' + days + ' يوم)' : '') + '</p>' : '') +
+    (Number(sub.maxProducts) > 0 ? '<p class="muted">المنتجات: ' + products.length + ' / ' + Number(sub.maxProducts) + '</p>' : '');
+}
+
 function renderStats() {
   $('sProducts').textContent = products.length;
   $('sCats').textContent = cats.length;
@@ -359,7 +376,14 @@ guard('store_owner', async (user, r) => {
   });
 
   // منتجات
-  $('addProductBtn').addEventListener('click', () => openSheet(null));
+  $('addProductBtn').addEventListener('click', () => {
+    // حد المنتجات بيتطبّق في الواجهة (مش في قواعد Firebase)
+    if (sub && Number(sub.maxProducts) > 0 && products.length >= Number(sub.maxProducts)) {
+      toast('وصلت للحد الأقصى لباقتك (' + Number(sub.maxProducts) + ' منتج). تواصل مع الإدارة للترقية.', true);
+      return;
+    }
+    openSheet(null);
+  });
   $('pSearch').addEventListener('input', renderProducts);
   $('productsList').addEventListener('click', e => { const b = e.target.closest('[data-act]'); if (b) productAction(b.dataset.act, b.dataset.id); });
   $('sCancel').addEventListener('click', closeSheet);
@@ -421,11 +445,15 @@ guard('store_owner', async (user, r) => {
   }, loadErr('بيانات المتجر'));
   onSnapshot(query(collection(db, 'products'), where('storeId', '==', storeId)), s => {
     products = s.docs.map(d => ({ id: d.id, ...d.data({ serverTimestamps: 'estimate' }) }));
-    renderProducts(); renderCats(); renderStats();
+    renderProducts(); renderCats(); renderStats(); renderSub();
   }, loadErr('المنتجات'));
   onSnapshot(query(collection(db, 'categories'), where('storeId', '==', storeId)), s => {
     cats = s.docs.map(d => ({ id: d.id, ...d.data() }));
     renderCats(); renderProducts(); renderStats();
   }, loadErr('التصنيفات'));
+  onSnapshot(doc(db, 'subscriptions', storeId), s => {
+    sub = s.exists() ? s.data({ serverTimestamps: 'estimate' }) : null;
+    renderSub();
+  }, () => {});
   listenOrders();
 });

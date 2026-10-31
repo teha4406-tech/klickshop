@@ -1,4 +1,5 @@
 import { guard, logout, esc, escA } from './app.js';
+import { initExtra } from './admin-extra.js';
 import { auth, db, firebaseConfig } from './firebase-config.js';
 import { initializeApp, deleteApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
 import { getAuth, createUserWithEmailAndPassword, signOut, sendPasswordResetEmail } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
@@ -10,6 +11,7 @@ import {
 const $ = id => document.getElementById(id);
 let stores = [];
 let owners = [];
+let extra = null;
 
 /* ---------- أدوات واجهة ---------- */
 function toast(text, bad) {
@@ -126,7 +128,7 @@ function renderStats() {
   $('cActive').textContent = stores.filter(s => s.active).length;
   $('cOwners').textContent = owners.length;
 }
-function renderAll() { renderStores(); renderOwners(); renderStats(); }
+function renderAll() { renderStores(); renderOwners(); renderStats(); if (extra) extra.refresh(); }
 
 /* ---------- صاحب محل ---------- */
 async function addOwner() {
@@ -267,6 +269,7 @@ guard('super_admin', async user => {
   });
   $('addStoreBtn').addEventListener('click', addStore);
   $('addOwnerBtn').addEventListener('click', addOwner);
+  extra = initExtra({ openModal, toast, errMsg, getStores: () => stores, getOwners: () => owners });
   $('storesList').addEventListener('click', e => { const b = e.target.closest('[data-act]'); if (b) storeAction(b.dataset.act, b.dataset.id); });
   $('ownersList').addEventListener('click', e => { const b = e.target.closest('[data-act]'); if (b) ownerAction(b.dataset.act, b.dataset.id); });
 

@@ -3,18 +3,80 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>KlikShop | منصة كتالوجات المتاجر</title>
-  <link rel="stylesheet" href="style.css">
+  <title>KlikShop | كتالوج إلكتروني لمحلك</title>
+  <meta name="description" content="أنشئ كتالوج إلكتروني لمحل الملابس بتاعك، واستقبل طلبات عملائك على واتساب.">
+  <link rel="stylesheet" href="landing.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#4f46e5">
+  <link rel="apple-touch-icon" href="icon-192.png">
 </head>
 <body>
-  <section class="hero">
-    <div class="logo">🛍️</div>
-    <h1>KlikShop</h1>
-    <p>منصة لإنشاء وإدارة كتالوجات إلكترونية لمحلات الملابس، وطلبات العملاء توصلك على واتساب.</p>
-    <a class="btn" href="login.html">تسجيل الدخول</a>
+  <header class="hero">
+    <div class="wrap">
+      <div class="nav">
+        <div class="logo"><i>🛍️</i><span data-name>KlikShop</span></div>
+        <a class="btn sm" href="login.html">دخول أصحاب المحلات</a>
+      </div>
+      <h1 id="hTitle">كتالوج إلكتروني احترافي لمحلك، وطلبات عملائك توصلك على واتساب</h1>
+      <p id="hSub">بتضيف منتجاتك بالصور والمقاسات والألوان، وتبعت رابط الكتالوج لعملائك، وهما يختاروا ويبعتولك الطلب بضغطة.</p>
+      <div class="cta" id="cta"><a class="btn" href="#pricing">شوف الباقات</a></div>
+    </div>
+  </header>
+
+  <section>
+    <div class="wrap">
+      <h2 class="t">كل اللي محتاجه لمحلك</h2>
+      <p class="sub">منصة بسيطة بتشتغل من الموبايل، من غير ما تحتاج مبرمج.</p>
+      <div class="grid">
+        <div class="f"><div class="i">📦</div><h3>منتجات بصور ومقاسات وألوان</h3><p>أضف منتجاتك وصورها من موبايلك، وحدد المقاسات والألوان والأسعار والخصومات.</p></div>
+        <div class="f"><div class="i">🔗</div><h3>رابط كتالوج خاص بمحلك</h3><p>رابط مستقل تبعته لعملائك على واتساب أو إنستجرام أو في البايو.</p></div>
+        <div class="f"><div class="i">💬</div><h3>طلبات على واتساب</h3><p>العميل يختار ويضيف للسلة، والطلب يوصلك مرتب على واتساب وفي لوحتك.</p></div>
+        <div class="f"><div class="i">🧾</div><h3>إدارة الطلبات</h3><p>تابع كل طلب وغيّر حالته: جديد، مؤكد، اتشحن، اتسلّم.</p></div>
+        <div class="f"><div class="i">🎨</div><h3>شكل يناسب هويتك</h3><p>اختار لون الكتالوج وشعارك وعدد أعمدة المنتجات.</p></div>
+        <div class="f"><div class="i">🔒</div><h3>بيانات محمية</h3><p>كل محل ليه حساب خاص، ومحدش يشوف بيانات محل تاني.</p></div>
+      </div>
+    </div>
   </section>
-  <div class="container">
-    <div class="card"><p class="muted">الصفحة التسويقية وباقات الأسعار هتتضاف في مرحلة لاحقة.</p></div>
-  </div>
+
+  <section style="background:#fff">
+    <div class="wrap">
+      <h2 class="t">إزاي تبدأ؟</h2>
+      <p class="sub">ثلاث خطوات بس.</p>
+      <div class="grid steps">
+        <div class="f"><h3>تتواصل معانا</h3><p>نفعّل لك حساب ومتجر على المنصة.</p></div>
+        <div class="f"><h3>تضيف منتجاتك</h3><p>من لوحة التحكم على موبايلك بالصور والأسعار.</p></div>
+        <div class="f"><h3>تبعت الرابط لعملائك</h3><p>واستقبل الطلبات على واتساب.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="pricing">
+    <div class="wrap">
+      <h2 class="t">الباقات والأسعار</h2>
+      <p class="sub">اختار الباقة المناسبة لحجم محلك.</p>
+      <div class="grid" id="plans"></div>
+    </div>
+  </section>
+
+  <section style="background:#fff">
+    <div class="wrap" style="max-width:720px">
+      <h2 class="t">أسئلة شائعة</h2>
+      <p class="sub"></p>
+      <details><summary>محتاج أعرف برمجة؟</summary><p>لأ خالص. كل حاجة بتتعمل من لوحة تحكم بسيطة على الموبايل.</p></details>
+      <details><summary>العملاء بيدفعوا إزاي؟</summary><p>الطلب بيوصلك على واتساب، وإنت بتتفق مع العميل على الدفع والتوصيل زي ما بتعمل دلوقتي.</p></details>
+      <details><summary>أقدر أغيّر منتجاتي وأسعاري؟</summary><p>أيوه، في أي وقت من لوحة التحكم، والتغييرات بتظهر للعملاء خلال دقايق.</p></details>
+    </div>
+  </section>
+
+  <footer>
+    <div class="wrap">
+      <div><b data-name>KlikShop</b> <span id="fTag"></span></div>
+      <div class="contact" id="contact"></div>
+      <div><a href="login.html">تسجيل الدخول</a></div>
+    </div>
+  </footer>
+
+  <script type="module" src="landing.js"></script>
+  <script type="module" src="pwa.js"></script>
 </body>
 </html>

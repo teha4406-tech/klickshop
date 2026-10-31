@@ -127,3 +127,14 @@ select,textarea{width:100%;padding:.8rem .9rem;border:1.5px solid var(--border);
 .ocard select{width:auto;padding:.4rem .6rem}
 .pill.warn{background:#fff4e0;color:#b45309}
 .logoPrev{width:72px;height:72px;border-radius:14px;object-fit:cover;border:1px solid var(--border);background:var(--bg)}
+
+/* ===== المرحلة 5 ===== */
+.pbtns{display:flex;gap:.4rem;margin:.6rem 0 1rem;flex-wrap:wrap}
+.pbtns button{border:1.5px solid var(--border);background:var(--surface);color:var(--text);font:inherit;font-weight:700;padding:.4rem 1rem;border-radius:999px;cursor:pointer}
+.pbtns button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.barrow{display:flex;align-items:center;gap:.6rem;margin:.5rem 0}
+.barrow .n{width:7.5rem;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.9rem}
+.barrow .tr{flex:1;background:var(--bg);border-radius:8px;height:.8rem;overflow:hidden}
+.barrow .fl{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:8px;min-width:2px}
+.barrow .v{width:9rem;flex-shrink:0;text-align:end;font-size:.82rem;color:var(--muted)}
+.thumb48{width:48px;height:48px;border-radius:10px;object-fit:cover;background:var(--bg);flex-shrink:0}

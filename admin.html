@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>لوحة المدير العام | KlikShop</title>
   <link rel="stylesheet" href="style.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#4f46e5">
+  <link rel="apple-touch-icon" href="icon-192.png">
 </head>
 <body class="loading">
   <div class="page">
@@ -16,6 +19,11 @@
       <button type="button" data-tab="dash" class="active">📊 الرئيسية</button>
       <button type="button" data-tab="stores">🏪 المتاجر</button>
       <button type="button" data-tab="owners">👤 أصحاب المحلات</button>
+      <button type="button" data-tab="plans">💳 الباقات</button>
+      <button type="button" data-tab="products">📦 المنتجات</button>
+      <button type="button" data-tab="orders">🧾 الطلبات</button>
+      <button type="button" data-tab="reports">📈 التقارير</button>
+      <button type="button" data-tab="settings">⚙️ الإعدادات</button>
     </nav>
     <main class="container">
       <section id="tab-dash" class="tab active">
@@ -44,6 +52,53 @@
         <div class="bar"><h2>أصحاب المحلات</h2><button class="btn btn-sm" id="addOwnerBtn" type="button">➕ صاحب محل جديد</button></div>
         <div id="ownersList" class="list"></div>
       </section>
+
+      <section id="tab-plans" class="tab">
+        <div class="bar"><h2>الباقات</h2><button class="btn btn-sm" id="addPlanBtn" type="button">➕ باقة جديدة</button></div>
+        <div id="plansList" class="list"></div>
+        <h2 style="margin:1.4rem 0 .6rem">اشتراكات المتاجر</h2>
+        <div id="subsList" class="list"></div>
+      </section>
+
+      <section id="tab-products" class="tab">
+        <div class="bar"><h2>المنتجات</h2><select id="aStore" style="width:auto;max-width:65%"></select></div>
+        <div id="aProducts" class="list"></div>
+      </section>
+
+      <section id="tab-orders" class="tab">
+        <div class="bar"><h2>الطلبات</h2><button class="btn btn-sm" id="aOrdersRefresh" type="button">🔄 تحديث</button></div>
+        <div class="bar"><select id="oStore" style="width:auto;max-width:55%"></select>
+          <select id="oStatus" style="width:auto"><option value="">كل الحالات</option><option value="new">جديد</option><option value="confirmed">مؤكد</option><option value="shipped">اتشحن</option><option value="delivered">اتسلّم</option><option value="cancelled">ملغي</option></select></div>
+        <div class="card" id="oHint" hidden></div>
+        <div id="aOrders"></div>
+      </section>
+
+      <section id="tab-reports" class="tab">
+        <div class="bar"><h2>التقارير</h2><button class="btn btn-sm" id="rRefresh" type="button">🔄 تحديث</button></div>
+        <div class="pbtns" id="rPeriod">
+          <button type="button" data-p="today">النهارده</button>
+          <button type="button" data-p="7">آخر 7 أيام</button>
+          <button type="button" data-p="30" class="on">آخر 30 يوم</button>
+          <button type="button" data-p="all">الكل</button>
+        </div>
+        <div class="card" id="rHint" hidden></div>
+        <div class="grid" id="rStats"></div>
+        <p class="muted" id="rStatus" style="margin-bottom:1rem"></p>
+        <div class="card"><h2>المتاجر</h2><div id="rStores"><p class="muted">اضغط تحديث لتحميل التقرير.</p></div></div>
+      </section>
+
+      <section id="tab-settings" class="tab">
+        <div class="card">
+          <h2>إعدادات المنصة</h2>
+          <p class="muted">بتظهر في الصفحة التسويقية.</p>
+          <label for="ps_name">اسم المنصة</label><input id="ps_name" maxlength="40">
+          <label for="ps_tagline">جملة تعريفية</label><input id="ps_tagline" maxlength="160">
+          <label for="ps_whatsapp">واتساب التواصل (بالكود الدولي من غير +)</label><input id="ps_whatsapp" dir="ltr" inputmode="numeric">
+          <label for="ps_email">إيميل التواصل</label><input id="ps_email" type="email" dir="ltr">
+          <label for="ps_currency">العملة المعروضة في الأسعار</label><input id="ps_currency" maxlength="10" placeholder="ج.م">
+          <button class="btn" id="ps_save" type="button" style="margin-top:1rem">💾 حفظ</button>
+        </div>
+      </section>
     </main>
   </div>
 
@@ -61,5 +116,6 @@
   </div>
   <div class="toast" id="toast" hidden></div>
   <script type="module" src="admin.js"></script>
+  <script type="module" src="pwa.js"></script>
 </body>
 </html>
