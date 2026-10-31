@@ -78,6 +78,8 @@ async function ownerSuite(user) {
   await T('إنشاء متجر جديد', false, () => setDoc(doc(db, 'stores', 'zz-owner-test'), fakeStore(me)));
   await T('حذف متجري', false, () => deleteDoc(doc(db, 'stores', mineId)));
   await T('قراءة طلبات متجري', true, () => getDocs(query(collection(db, 'orders'), where('storeId', '==', mineId), limit(1))));
+  await T('قراءة كل منتجات متجري (بما فيها المخفية)', true, () => getDocs(query(collection(db, 'products'), where('storeId', '==', mineId), limit(1))));
+  await T('قراءة تصنيفات متجري', true, () => getDocs(query(collection(db, 'categories'), where('storeId', '==', mineId), limit(1))));
   await T('كتابة في الباقات', false, () => setDoc(doc(db, 'plans', 'zz-test'), { x: 1 }));
   await T('كتابة في إعدادات المنصة', false, () => setDoc(doc(db, 'platformSettings', 'zz-test'), { x: 1 }));
 
@@ -87,7 +89,16 @@ async function ownerSuite(user) {
   await T('إضافة منتج في متجري', true, () => setDoc(pRef, product(mineId)));
   await T('تعديل منتج في متجري', true, () => updateDoc(pRef, { price: 2 }));
   await T('نقل منتجي لمتجر تاني', false, () => updateDoc(pRef, { storeId: otherId || 'someone-else' }));
+  const iRef = doc(db, 'productImages', pRef.id);
+  await T('حفظ صور منتجي', true, () => setDoc(iRef, { storeId: mineId, productId: pRef.id, images: [] }));
+  await T('نقل صور منتجي لمتجر تاني', false, () => updateDoc(iRef, { storeId: otherId || 'someone-else' }));
+  await T('حذف صور منتجي', true, () => deleteDoc(iRef));
   await T('حذف منتج من متجري', true, () => deleteDoc(pRef));
+  await T('إضافة تصنيف في متجري ثم حذفه', true, async () => {
+    const cRef = doc(collection(db, 'categories'));
+    await setDoc(cRef, { storeId: mineId, name: '__rules_test__', order: 1, active: false, createdAt: serverTimestamp() });
+    await deleteDoc(cRef);
+  });
 
   // طلب غير صالح (حالة غير new) لازم يترفض
   await T('إنشاء طلب بحالة غير new', false, () => setDoc(doc(collection(db, 'orders')), {
@@ -99,6 +110,9 @@ async function ownerSuite(user) {
     skip('اختبارات متجر شخص تاني', 'محتاج متجر تاني شغّال لصاحب محل تاني');
     return;
   }
+  await T('قراءة كل منتجات متجر شخص تاني (من غير فلتر ظاهر)', false, () => getDocs(query(collection(db, 'products'), where('storeId', '==', otherId), limit(1))));
+  await T('قراءة المنتجات الظاهرة لمتجر شخص تاني (الكتالوج العام)', true, () => getDocs(query(collection(db, 'products'), where('storeId', '==', otherId), where('active', '==', true), limit(1))));
+  await T('إضافة تصنيف في متجر شخص تاني', false, () => setDoc(doc(collection(db, 'categories')), { storeId: otherId, name: 'hack', order: 1, active: true, createdAt: serverTimestamp() }));
   await T('قراءة وثيقة صاحب محل تاني', false, () => getDoc(doc(db, 'users', otherOwner)));
   await T('تعديل اسم متجر شخص تاني', false, () => updateDoc(doc(db, 'stores', otherId), { name: 'hack' }));
   await T('إضافة منتج في متجر شخص تاني', false, () => setDoc(doc(collection(db, 'products')), product(otherId)));

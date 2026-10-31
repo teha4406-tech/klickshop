@@ -76,3 +76,54 @@ select,textarea{width:100%;padding:.8rem .9rem;border:1.5px solid var(--border);
 .trow{display:flex;gap:.7rem;align-items:flex-start;padding:.7rem .9rem;border-radius:12px;border:1px solid var(--border);background:var(--surface);margin-bottom:.5rem}
 .trow.pass{border-color:#b7e4c7}
 .trow.fail{border-color:#f5c2c2;background:#fff6f6}
+
+/* ===== المرحلة 3: لوحة صاحب المحل ===== */
+.modal-box.wide{max-width:560px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:.6rem}
+.imgs{display:flex;gap:.5rem;flex-wrap:wrap;margin:.4rem 0 .6rem}
+.img{position:relative;width:78px;height:78px;border-radius:10px;overflow:hidden;border:2px solid var(--border)}
+.img.main{border-color:var(--accent)}
+.img img{width:100%;height:100%;object-fit:cover;display:block}
+.img button{position:absolute;top:2px;inset-inline-end:2px;border:0;background:rgba(0,0,0,.6);color:#fff;border-radius:6px;font-size:.7rem;padding:.1rem .35rem;cursor:pointer}
+.img button.mk{top:auto;bottom:2px}
+.check{display:flex;align-items:center;gap:.5rem;margin:.6rem 0;color:var(--text)}
+.check input{width:auto}
+.thumb{width:56px;height:56px;border-radius:10px;object-fit:cover;background:var(--bg);flex-shrink:0;display:grid;place-items:center;font-size:1.4rem}
+.chips{display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:.8rem}
+.chips button{border:1px solid var(--border);background:var(--surface);color:var(--text);font:inherit;font-size:.82rem;padding:.35rem .8rem;border-radius:999px;cursor:pointer}
+.chips button.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.order .items{margin:.5rem 0;padding-inline-start:1.2rem;color:var(--text);font-size:.92rem}
+.order select{width:auto;padding:.4rem .6rem}
+.banner{background:#fff4e5;color:#92400e;border:1px solid #fcd9a5;border-radius:12px;padding:.8rem 1rem;margin-bottom:1rem;font-weight:600}
+.linkbox{display:flex;gap:.5rem}
+.linkbox input{flex:1}
+.linkbox .btn{width:auto;margin:0}
+.logo-prev{width:72px;height:72px;border-radius:14px;object-fit:cover;background:var(--bg);display:grid;place-items:center;font-size:1.8rem;border:1px solid var(--border)}
+
+/* ===== المرحلة 3: منتجات وطلبات ===== */
+.modal-box.wide{max-width:560px}
+.pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(165px,1fr));gap:.8rem}
+.pcard{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;display:flex;flex-direction:column}
+.pimg{aspect-ratio:1;background:var(--bg);display:grid;place-items:center;font-size:2rem;overflow:hidden}
+.pimg img{width:100%;height:100%;object-fit:cover}
+.pbody{padding:.6rem .7rem;flex:1}
+.price{color:var(--accent);font-weight:800}
+.pcard .actions{padding:0 .6rem .6rem}
+.thumbs{display:flex;gap:.5rem;flex-wrap:wrap;margin:.6rem 0}
+.th{position:relative;width:78px;height:78px;border-radius:10px;overflow:hidden;border:2px solid var(--border)}
+.th.main{border-color:var(--accent)}
+.th img{width:100%;height:100%;object-fit:cover;display:block}
+.th button{position:absolute;top:2px;inset-inline-end:2px;width:22px;height:22px;border:0;border-radius:50%;background:rgba(0,0,0,.65);color:#fff;cursor:pointer;line-height:1;padding:0}
+.th .star{inset-inline-end:auto;inset-inline-start:2px}
+.chk{display:flex;align-items:center;gap:.5rem;margin-top:.7rem;color:var(--text);font-weight:600}
+.chk input{width:auto}
+.cols2{display:grid;grid-template-columns:1fr 1fr;gap:.6rem}
+.linkbox{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap}
+.linkbox input{flex:1;min-width:200px}
+.linkbox .btn{width:auto;margin:0}
+.ocard{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:.9rem;margin-bottom:.7rem}
+.ocard ul{margin:.5rem 1.2rem}
+.ocard .head{display:flex;justify-content:space-between;gap:.5rem;flex-wrap:wrap;align-items:center}
+.ocard select{width:auto;padding:.4rem .6rem}
+.pill.warn{background:#fff4e0;color:#b45309}
+.logoPrev{width:72px;height:72px;border-radius:14px;object-fit:cover;border:1px solid var(--border);background:var(--bg)}

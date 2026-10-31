@@ -12,19 +12,128 @@
       <div class="brand">🛍️ KlikShop <span class="badge">صاحب محل</span></div>
       <div class="who"><span id="who"></span><button class="btn btn-sm btn-outline" id="logoutBtn" type="button" style="margin:0">خروج</button></div>
     </header>
+    <nav class="tabs" id="tabs">
+      <button type="button" data-tab="home" class="active">🏠 الرئيسية</button>
+      <button type="button" data-tab="products">📦 المنتجات</button>
+      <button type="button" data-tab="categories">🗂️ التصنيفات</button>
+      <button type="button" data-tab="orders">🧾 الطلبات</button>
+      <button type="button" data-tab="store">⚙️ المتجر</button>
+    </nav>
     <main class="container">
-      <h1>لوحة التحكم</h1>
-      <p style="margin:.6rem 0"><a href="security-test.html">🔒 اختبار الأمان</a></p>
-      <div class="card" id="storeBox"><p class="muted">جاري تحميل بيانات متجرك...</p></div>
-      <div class="card" style="margin-top:1rem">
-        <h2>الأقسام القادمة</h2>
-        <ul class="soon">
-          <li>📦 المنتجات والتصنيفات والطلبات (المرحلة 3)</li>
-          <li>🌐 رابط الكتالوج العام (المرحلة 4)</li>
-        </ul>
-      </div>
+      <section id="tab-home" class="tab active">
+        <div class="card" id="homeBox"><p class="muted">جاري تحميل بيانات متجرك...</p></div>
+        <div id="homeStats" hidden>
+          <div class="grid">
+            <div class="stat"><b id="sProducts">…</b><span>المنتجات</span></div>
+            <div class="stat"><b id="sCats">…</b><span>التصنيفات</span></div>
+            <div class="stat"><b id="sNew">…</b><span>طلبات جديدة</span></div>
+            <div class="stat"><b id="sOrders">…</b><span>كل الطلبات</span></div>
+          </div>
+          <div class="card">
+            <h2>🔗 رابط الكتالوج العام</h2>
+            <p class="muted">ده الرابط اللي تبعته لعملائك (الكتالوج نفسه هيشتغل في المرحلة الجاية).</p>
+            <div class="linkbox" style="margin-top:.6rem">
+              <input type="text" id="catalogLink" readonly dir="ltr">
+              <button class="btn btn-sm" id="copyBtn" type="button">نسخ</button>
+            </div>
+          </div>
+          <p style="margin:.6rem 0"><a href="security-test.html">🔒 اختبار الأمان</a></p>
+        </div>
+      </section>
+
+      <section id="tab-products" class="tab">
+        <div class="bar"><h2>المنتجات</h2><button class="btn btn-sm" id="addProductBtn" type="button">➕ منتج جديد</button></div>
+        <input type="search" id="pSearch" placeholder="🔍 ابحث باسم المنتج" style="margin-bottom:.8rem">
+        <div id="productsList" class="pgrid"></div>
+      </section>
+
+      <section id="tab-categories" class="tab">
+        <div class="bar"><h2>التصنيفات</h2><button class="btn btn-sm" id="addCatBtn" type="button">➕ تصنيف جديد</button></div>
+        <div id="catsList" class="list"></div>
+      </section>
+
+      <section id="tab-orders" class="tab">
+        <div class="bar">
+          <h2>الطلبات</h2>
+          <select id="oFilter" style="width:auto">
+            <option value="">كل الحالات</option>
+            <option value="new">جديد</option>
+            <option value="confirmed">مؤكد</option>
+            <option value="shipped">اتشحن</option>
+            <option value="delivered">اتسلّم</option>
+            <option value="cancelled">ملغي</option>
+          </select>
+        </div>
+        <div class="card" id="ordersHint" hidden></div>
+        <div id="ordersList"></div>
+      </section>
+
+      <section id="tab-store" class="tab">
+        <div class="card">
+          <h2>بيانات المتجر</h2>
+          <form id="storeForm">
+            <label for="st_name">اسم المتجر</label><input id="st_name" required maxlength="80">
+            <label for="st_description">وصف مختصر</label><textarea id="st_description" rows="3" maxlength="400"></textarea>
+            <label for="st_whatsapp">واتساب بالكود الدولي من غير + (مثال 201012345678)</label><input id="st_whatsapp" dir="ltr" required inputmode="numeric">
+            <label for="st_phone">تليفون</label><input id="st_phone" dir="ltr" maxlength="20">
+            <label for="st_address">العنوان</label><input id="st_address" maxlength="200">
+            <label for="st_instagram">انستجرام (الرابط كامل)</label><input id="st_instagram" dir="ltr" maxlength="200" placeholder="https://instagram.com/...">
+            <label for="st_facebook">فيسبوك (الرابط كامل)</label><input id="st_facebook" dir="ltr" maxlength="200" placeholder="https://facebook.com/...">
+            <label for="st_tiktok">تيك توك (الرابط كامل)</label><input id="st_tiktok" dir="ltr" maxlength="200" placeholder="https://tiktok.com/@...">
+            <label>شعار المتجر</label>
+            <div class="linkbox"><img id="st_logoPrev" class="logoPrev" alt="" hidden><input type="file" id="st_logo" accept="image/*"><button class="btn btn-sm btn-outline" id="st_logoClear" type="button">مسح الشعار</button></div>
+            <div class="cols2">
+              <div><label for="st_color">لون الكتالوج</label><input type="color" id="st_color" value="#4f46e5"></div>
+              <div><label for="st_cols">أعمدة المنتجات</label><select id="st_cols"><option value="2">2</option><option value="3">3</option></select></div>
+            </div>
+            <button class="btn" id="st_save" type="submit" style="margin-top:1rem">💾 حفظ</button>
+          </form>
+        </div>
+      </section>
     </main>
   </div>
+
+  <!-- نافذة المنتج -->
+  <div class="modal" id="sheet" hidden>
+    <div class="modal-box wide" role="dialog" aria-modal="true">
+      <h2 id="sTitle">منتج</h2>
+      <label for="sName">اسم المنتج</label><input id="sName" maxlength="120">
+      <div class="cols2">
+        <div><label for="sPrice">السعر</label><input id="sPrice" type="number" min="0" step="any" inputmode="decimal"></div>
+        <div><label for="sOld">السعر قبل الخصم (اختياري)</label><input id="sOld" type="number" min="0" step="any" inputmode="decimal"></div>
+      </div>
+      <label for="sCat">التصنيف</label><select id="sCat"></select>
+      <label for="sDesc">الوصف</label><textarea id="sDesc" rows="3" maxlength="1000"></textarea>
+      <label for="sSizes">المقاسات (افصل بينها بفاصلة، مثال: S, M, L)</label><input id="sSizes" dir="ltr">
+      <label for="sColors">الألوان (افصل بينها بفاصلة، مثال: أسود, أبيض)</label><input id="sColors">
+      <label>الصور (أول صورة هي الرئيسية)</label>
+      <div class="thumbs" id="sImgs"></div>
+      <input type="file" id="sFiles" accept="image/*" multiple>
+      <p class="muted" style="font-size:.8rem;margin-top:.3rem">الصور بتتضغط تلقائي. الحد الأقصى 5 صور.</p>
+      <label class="chk"><input type="checkbox" id="sActive" checked> ظاهر في الكتالوج</label>
+      <label class="chk"><input type="checkbox" id="sFeatured"> منتج مميز</label>
+      <div class="note err" id="sError" hidden></div>
+      <div class="row">
+        <button class="btn" id="sSave" type="button">💾 حفظ</button>
+        <button class="btn btn-outline" id="sCancel" type="button">إلغاء</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- نافذة عامة -->
+  <div class="modal" id="modal" hidden>
+    <div class="modal-box" role="dialog" aria-modal="true">
+      <h2 id="mTitle"></h2>
+      <p class="muted" id="mMsg" hidden></p>
+      <div id="mFields"></div>
+      <div class="note err" id="mError" hidden></div>
+      <div class="row">
+        <button class="btn" id="mOk" type="button">حفظ</button>
+        <button class="btn btn-outline" id="mCancel" type="button">إلغاء</button>
+      </div>
+    </div>
+  </div>
+  <div class="toast" id="toast" hidden></div>
   <script type="module" src="dashboard.js"></script>
 </body>
 </html>
