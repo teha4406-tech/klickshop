@@ -1,5 +1,5 @@
 // نافذة عامة (فورم أو تأكيد) ورسائل منبثقة، بتستخدمها لوحة صاحب المحل
-import { esc, escA } from './app.js';
+import { esc, escA, latinDigits } from './app.js';
 
 const $ = id => document.getElementById(id);
 let mResolve = null;
@@ -52,7 +52,7 @@ function closeModal(result) {
 export function initModal() {
   $('mOk').addEventListener('click', () => {
     const vals = {};
-    mFields.forEach(f => { const el = $('f_' + f.id); vals[f.id] = el.value.trim(); });
+    mFields.forEach(f => { const el = $('f_' + f.id); vals[f.id] = f.dir === 'ltr' ? latinDigits(el.value.trim()) : el.value.trim(); });
     const showErr = m => { $('mError').textContent = m; $('mError').hidden = false; };
     for (const f of mFields) if (f.required && !vals[f.id]) { showErr('املأ كل الخانات المطلوبة.'); return; }
     const err = mValidate ? mValidate(vals) : '';
@@ -61,4 +61,8 @@ export function initModal() {
   });
   $('mCancel').addEventListener('click', () => closeModal(null));
   $('modal').addEventListener('click', e => { if (e.target === $('modal')) closeModal(null); });
+  $('modal').addEventListener('keydown', e => {
+    if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') { e.preventDefault(); $('mOk').click(); }
+    if (e.key === 'Escape') closeModal(null);
+  });
 }

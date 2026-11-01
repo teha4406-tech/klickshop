@@ -38,6 +38,7 @@
             <div class="linkbox" style="margin-top:.6rem">
               <input type="text" id="catalogLink" readonly dir="ltr">
               <button class="btn btn-sm" id="copyBtn" type="button">نسخ</button>
+              <a class="btn btn-sm btn-outline" id="openLink" href="#" target="_blank" rel="noopener" style="margin:0">فتح</a>
             </div>
           </div>
           <div class="card" id="subBox" hidden></div>
@@ -103,8 +104,8 @@
       <h2 id="sTitle">منتج</h2>
       <label for="sName">اسم المنتج</label><input id="sName" maxlength="120">
       <div class="cols2">
-        <div><label for="sPrice">السعر</label><input id="sPrice" type="number" min="0" step="any" inputmode="decimal"></div>
-        <div><label for="sOld">السعر قبل الخصم (اختياري)</label><input id="sOld" type="number" min="0" step="any" inputmode="decimal"></div>
+        <div><label for="sPrice">السعر</label><input id="sPrice" type="text" inputmode="decimal" autocomplete="off"></div>
+        <div><label for="sOld">السعر قبل الخصم (اختياري)</label><input id="sOld" type="text" inputmode="decimal" autocomplete="off"></div>
       </div>
       <label for="sCat">التصنيف</label><select id="sCat"></select>
       <label for="sDesc">الوصف</label><textarea id="sDesc" rows="3" maxlength="1000"></textarea>

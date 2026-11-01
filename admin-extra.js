@@ -1,6 +1,6 @@
 // تبويبات المدير العام الإضافية: الباقات والاشتراكات، المنتجات، الطلبات، التقارير، إعدادات المنصة
 import { db } from './firebase-config.js';
-import { esc, escA } from './app.js';
+import { esc, escA, latinDigits } from './app.js';
 import { isImageData } from './images.js';
 import {
   collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, writeBatch, query, where, orderBy, limit,
@@ -277,7 +277,7 @@ export function initExtra(ctx) {
     } catch (e) { toast('تعذّر تحميل الإعدادات.', true); }
   }
   async function saveSettings() {
-    const wa = $('ps_whatsapp').value.replace(/\D/g, '');
+    const wa = latinDigits($('ps_whatsapp').value).replace(/\D/g, '');
     if (wa && !/^\d{8,15}$/.test(wa)) { toast('رقم الواتساب لازم 8 لـ 15 رقم بالكود الدولي.', true); return; }
     try {
       await setDoc(doc(db, 'platformSettings', 'main'), {

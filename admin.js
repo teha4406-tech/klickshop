@@ -1,10 +1,10 @@
-import { guard, logout, esc, escA } from './app.js';
+import { guard, logout, esc, escA, latinDigits } from './app.js';
 import { initExtra } from './admin-extra.js';
 import { auth, db, firebaseConfig } from './firebase-config.js';
 import { initializeApp, deleteApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
 import { getAuth, createUserWithEmailAndPassword, signOut, sendPasswordResetEmail } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import {
-  collection, doc, query, where, getCountFromServer, onSnapshot, runTransaction,
+  collection, doc, query, where, getDocs, writeBatch, getCountFromServer, onSnapshot, runTransaction,
   setDoc, updateDoc, deleteDoc, serverTimestamp
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 
@@ -73,7 +73,7 @@ function closeModal(result) {
 }
 $('mOk').addEventListener('click', () => {
   const vals = {};
-  mFields.forEach(f => { const el = $('f_' + f.id); vals[f.id] = f.type === 'password' ? el.value : el.value.trim(); });
+  mFields.forEach(f => { const el = $('f_' + f.id); vals[f.id] = f.type === 'password' ? el.value : (f.dir === 'ltr' ? latinDigits(el.value.trim()) : el.value.trim()); });
   const showErr = m => { $('mError').textContent = m; $('mError').hidden = false; };
   for (const f of mFields) if (f.required && !vals[f.id]) { showErr('املأ كل الخانات المطلوبة.'); return; }
   const err = mValidate ? mValidate(vals) : '';
@@ -82,6 +82,10 @@ $('mOk').addEventListener('click', () => {
 });
 $('mCancel').addEventListener('click', () => closeModal(null));
 $('modal').addEventListener('click', e => { if (e.target === $('modal')) closeModal(null); });
+$('modal').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') { e.preventDefault(); $('mOk').click(); }
+  if (e.key === 'Escape') closeModal(null);
+});
 
 /* ---------- عرض القوائم ---------- */
 const ownerName = uid => {
@@ -99,6 +103,7 @@ function renderStores() {
       '<div class="sub">👤 ' + esc(ownerName(s.ownerUid)) + '</div>' +
       '<div class="sub" dir="ltr" style="text-align:start">📱 ' + esc(s.whatsapp || '') + '</div></div>' +
       '<div class="actions">' +
+      '<a class="abtn" href="store.html?s=' + encodeURIComponent(s.id) + '" target="_blank" rel="noopener">🔗 الكتالوج</a>' +
       '<button type="button" data-act="edit" data-id="' + escA(s.id) + '">✏️ تعديل</button>' +
       '<button type="button" data-act="toggle" data-id="' + escA(s.id) + '">' + (s.active ? '⏸️ إيقاف' : '▶️ تشغيل') + '</button>' +
       '<button type="button" class="danger" data-act="del" data-id="' + escA(s.id) + '">🗑️ حذف</button>' +
@@ -248,9 +253,16 @@ async function storeAction(act, id) {
     } else if (act === 'del') {
       const n = (await getCountFromServer(query(collection(db, 'products'), where('storeId', '==', id)))).data().count;
       if (n > 0) { toast('المتجر فيه ' + n + ' منتج. أوقفه بدل ما تحذفه.', true); return; }
-      const v = await openModal({ title: 'حذف المتجر', danger: true, okText: 'احذف', message: 'هيتحذف متجر "' + s.name + '" نهائيًا.' });
+      const on = (await getCountFromServer(query(collection(db, 'orders'), where('storeId', '==', id)))).data().count;
+      if (on > 0) { toast('المتجر ليه ' + on + ' طلب (سجل مهم). أوقفه بدل ما تحذفه.', true); return; }
+      const v = await openModal({ title: 'حذف المتجر', danger: true, okText: 'احذف', message: 'هيتحذف متجر "' + s.name + '" نهائيًا مع تصنيفاته واشتراكه.' });
       if (!v) return;
-      await deleteDoc(doc(db, 'stores', id));
+      const cs = await getDocs(query(collection(db, 'categories'), where('storeId', '==', id)));
+      const b = writeBatch(db);
+      b.delete(doc(db, 'stores', id));
+      cs.docs.forEach(d => b.delete(doc(db, 'categories', d.id)));
+      await b.commit();
+      try { await deleteDoc(doc(db, 'subscriptions', id)); } catch (e2) { /* مفيش اشتراك */ }
       toast('🗑️ تم حذف المتجر');
     }
   } catch (e) { toast(errMsg(e), true); }

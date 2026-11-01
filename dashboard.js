@@ -1,4 +1,4 @@
-import { guard, logout, esc, escA } from './app.js';
+import { guard, logout, esc, escA, latinDigits } from './app.js';
 import { db } from './firebase-config.js';
 import { toast, openModal, initModal } from './ui.js';
 import { compressFile, makeThumb, isImageData } from './images.js';
@@ -42,6 +42,7 @@ const waNumber = phone => {
 const catName = id => { const c = cats.find(x => x.id === id); return c ? c.name : 'بدون تصنيف'; };
 const splitList = s => [...new Set(String(s || '').split(/[,،\n]/).map(x => x.trim()).filter(Boolean))].slice(0, 20);
 const byOrder = (a, b) => (a.order || 0) - (b.order || 0);
+const num = s => parseFloat(latinDigits(s).replace('٫', '.').replace(',', '.'));
 
 function errMsg(e) {
   const c = (e && e.code) || '';
@@ -58,6 +59,7 @@ function renderHome() {
     (store.active ? '🟢 شغّال' : '⛔ موقوف من إدارة المنصة (مش هتقدر تعدّل لحد ما يتفعّل)') + '</p>';
   $('homeStats').hidden = false;
   $('catalogLink').value = new URL('store.html?s=' + encodeURIComponent(storeId), location.href).href;
+  $('openLink').href = $('catalogLink').value;
 }
 function renderSub() {
   const b = $('subBox');
@@ -148,8 +150,8 @@ async function saveProduct() {
   if (busy) return;
   const err = m => { $('sError').textContent = m; $('sError').hidden = false; };
   const name = $('sName').value.trim();
-  const price = parseFloat($('sPrice').value);
-  const old = $('sOld').value === '' ? 0 : parseFloat($('sOld').value);
+  const price = num($('sPrice').value);
+  const old = $('sOld').value.trim() === '' ? 0 : num($('sOld').value);
   if (!name) return err('اكتب اسم المنتج.');
   if (!(price >= 0)) return err('اكتب سعر صحيح.');
   if (!(old >= 0)) return err('السعر قبل الخصم غير صحيح.');
@@ -328,7 +330,7 @@ function fillStoreForm() {
 
 async function saveStore(e) {
   e.preventDefault();
-  const wa = $('st_whatsapp').value.replace(/\D/g, '');
+  const wa = latinDigits($('st_whatsapp').value).replace(/\D/g, '');
   if (!/^\d{8,15}$/.test(wa)) { toast('رقم الواتساب لازم يكون 8 لـ 15 رقم بالكود الدولي.', true); return; }
   for (const id of ['st_instagram', 'st_facebook', 'st_tiktok']) {
     const v = $(id).value.trim();
@@ -336,7 +338,7 @@ async function saveStore(e) {
   }
   const data = {
     name: $('st_name').value.trim(), description: $('st_description').value.trim(), whatsapp: wa,
-    phone: $('st_phone').value.trim(), address: $('st_address').value.trim(),
+    phone: latinDigits($('st_phone').value.trim()), address: $('st_address').value.trim(),
     instagram: $('st_instagram').value.trim(), facebook: $('st_facebook').value.trim(), tiktok: $('st_tiktok').value.trim(),
     logo: isImageData(logoData) ? logoData : '',
     theme: { color: $('st_color').value, cols: Number($('st_cols').value) === 3 ? 3 : 2 }

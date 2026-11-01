@@ -124,8 +124,10 @@ async function ownerSuite(user) {
 // زائر من غير تسجيل دخول: نسخة Firebase تانية مفيهاش مستخدم
 async function guestSuite() {
   const g = initializeFirestore(initializeApp(firebaseConfig, 'guest-' + Date.now()), { experimentalAutoDetectLongPolling: true });
-  const st = (await getDocs(query(collection(g, 'stores'), where('active', '==', true), limit(1)))).docs[0];
-  rows.push({ name: 'قراءة المتاجر الشغّالة (عام)', wantAllow: true, allowed: true, code: '', ok: true });
+  let st = null;
+  await T('قراءة المتاجر الشغّالة (عام)', true, async () => {
+    st = (await getDocs(query(collection(g, 'stores'), where('active', '==', true), limit(1)))).docs[0];
+  });
   if (!st) { skip('اختبارات الزائر على متجر', 'مفيش متجر شغّال'); return; }
   const sid = st.id;
   const order = extra => ({
@@ -176,6 +178,7 @@ $('runBtn').addEventListener('click', async () => {
 onAuthStateChanged(auth, async user => {
   if (!user) { location.replace('login.html'); return; }
   const r = await loadRole(user);
+  if (r.error) { document.body.classList.remove('loading'); $('who').textContent = 'مشكلة في الاتصال، حدّث الصفحة.'; return; }
   if (!r.role) { location.replace('login.html?e=noaccess'); return; }
   current = { user, role: r.role };
   $('who').textContent = user.email + ' — ' + (r.role === 'super_admin' ? 'مدير عام' : 'صاحب محل');

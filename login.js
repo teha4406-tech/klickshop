@@ -26,6 +26,7 @@ let busy = false;
 // بعد تسجيل الدخول: نحدد الدور من قاعدة البيانات ونحوّل لصفحة الدور
 async function route(user) {
   const r = await loadRole(user);
+  if (r.error) { note('مشكلة في الاتصال بالإنترنت، حاول تاني.'); return; }
   if (r.role === 'super_admin') { location.replace('admin.html'); return; }
   if (r.role === 'store_owner') { location.replace('dashboard.html'); return; }
   await signOut(auth);

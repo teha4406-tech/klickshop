@@ -1,6 +1,6 @@
 // كتالوج العملاء العام: بيتفتح برابط store.html?s=اسم-المتجر من غير تسجيل دخول
 import { db } from './firebase-config.js';
-import { esc, escA } from './app.js';
+import { esc, escA, latinDigits } from './app.js';
 import { isImageData } from './images.js';
 import {
   doc, getDoc, getDocs, setDoc, collection, query, where, limit, serverTimestamp
@@ -246,7 +246,7 @@ async function sendOrder() {
   const err = m => { $('cErr').textContent = m; $('cErr').hidden = false; };
   $('cErr').hidden = true;
   const name = $('cName').value.trim();
-  const phone = $('cPhone').value.trim();
+  const phone = latinDigits($('cPhone').value.trim());
   const note = $('cNote').value.trim();
   const wa = waDigits(store.whatsapp);
   if (cart.length === 0) return err('السلة فاضية.');
