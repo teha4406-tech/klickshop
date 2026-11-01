@@ -102,7 +102,8 @@ export function initExtra(ctx) {
       return '<div class="item"><div class="grow"><b>' + esc(s.name) + '</b> <span class="pill ' + st.cls + '">' + st.label + '</span>' +
         '<div class="sub">' + (sub ? esc(sub.planName || '—') + (end ? ' — ينتهي ' + fmtDay(end) + (st.days >= 0 ? ' (باقي ' + st.days + ' يوم)' : '') : '') : 'مفيش اشتراك') + '</div></div>' +
         '<div class="actions"><button type="button" data-act="sub" data-id="' + id + '">✏️ اشتراك</button>' +
-        (sub ? '<button type="button" data-act="renew" data-id="' + id + '">🔁 تجديد</button>' : '') + '</div></div>';
+        (sub ? '<button type="button" data-act="renew" data-id="' + id + '">🔁 تجديد</button>' +
+          '<button type="button" class="danger" data-act="cancel" data-id="' + id + '">🚫 إلغاء</button>' : '') + '</div></div>';
     }).join('');
   }
   async function editSub(s) {
@@ -130,6 +131,17 @@ export function initExtra(ctx) {
       });
       toast('✅ تم حفظ الاشتراك');
     } catch (e) { toast(errMsg(e), true); }
+  }
+  async function cancelSub(s) {
+    const sub = subs[s.id];
+    if (!sub) return;
+    const v = await openModal({
+      title: 'إلغاء الاشتراك', danger: true, okText: 'إلغاء الاشتراك',
+      message: 'هيتلغى اشتراك "' + s.name + '" (' + (sub.planName || '') + '). ده مش بيوقف المتجر؛ لو عايز توقفه روح تبويب المتاجر.'
+    });
+    if (!v) return;
+    try { await deleteDoc(doc(db, 'subscriptions', s.id)); toast('🚫 تم إلغاء الاشتراك'); }
+    catch (e) { toast(errMsg(e), true); }
   }
   async function renewSub(s) {
     const sub = subs[s.id];
@@ -310,7 +322,10 @@ export function initExtra(ctx) {
     const b = e.target.closest('[data-act]');
     if (!b) return;
     const s = getStores().find(x => x.id === b.dataset.id);
-    if (s) (b.dataset.act === 'renew' ? renewSub : editSub)(s);
+    if (!s) return;
+    if (b.dataset.act === 'renew') renewSub(s);
+    else if (b.dataset.act === 'cancel') cancelSub(s);
+    else editSub(s);
   });
   $('aStore').addEventListener('change', loadProducts);
   $('aProducts').addEventListener('click', e => { const b = e.target.closest('[data-act]'); if (b) productAction(b.dataset.act, b.dataset.id); });
