@@ -55,11 +55,13 @@
         <label for="cName">اسمك</label><input id="cName" maxlength="80" autocomplete="name">
         <label for="cPhone">رقم موبايلك</label><input id="cPhone" type="tel" dir="ltr" maxlength="20" autocomplete="tel">
         <label for="cNote">ملاحظات (اختياري)</label><textarea id="cNote" rows="2" maxlength="400"></textarea>
+        <div id="cPayBox" hidden><label>طريقة الدفع</label><div class="radio" id="cPayList"></div><div class="payinfo" id="cPayInfo" hidden></div></div>
         <div class="err" id="cErr" hidden></div>
         <button class="btn wa" id="sendBtn" type="button">📲 إرسال الطلب عبر واتساب</button>
       </div>
       <div id="cDone" hidden>
         <div class="ok" id="cDoneMsg"></div>
+        <div class="payinfo" id="cDonePay" hidden></div>
         <a class="btn wa" id="waAgain" href="#" target="_blank" rel="noopener">📲 افتح واتساب</a>
         <button class="btn ghost" id="cBack" type="button">رجوع للكتالوج</button>
       </div>

@@ -2,6 +2,7 @@ import { guard, logout, esc, escA, latinDigits } from './app.js';
 import { db } from './firebase-config.js';
 import { toast, openModal, initModal } from './ui.js';
 import { compressFile, makeThumb, isImageData } from './images.js';
+import { enabledMethods, instructions, methodLabel, payFormHtml, fillPayForm, readPayForm } from './payments.js';
 import {
   collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, writeBatch, query, where,
   orderBy, limit, onSnapshot, serverTimestamp
@@ -23,6 +24,8 @@ let busy = false;
 let logoData = '';
 let formFilled = false;
 let sub = null;
+let platform = {};
+let payments = [];
 
 /* ---------- أدوات ---------- */
 const fmtPrice = n => Number(n || 0).toLocaleString('ar-EG') + ' ج.م';
@@ -63,18 +66,40 @@ function renderHome() {
 }
 function renderSub() {
   const b = $('subBox');
-  if (!sub) { b.hidden = true; return; }
-  const end = sub.endsAt && sub.endsAt.toDate ? sub.endsAt.toDate() : null;
-  const days = end ? Math.ceil((end.getTime() - Date.now()) / 86400000) : null;
-  let state = '🟢 نشط';
-  if (sub.status === 'expired' || (days !== null && days < 0)) state = '⛔ منتهي';
-  else if (sub.status === 'trial') state = '🧪 تجريبي';
-  else if (days !== null && days <= 7) state = '⚠️ قرب ينتهي';
-  const day = end ? end.getFullYear() + '-' + String(end.getMonth() + 1).padStart(2, '0') + '-' + String(end.getDate()).padStart(2, '0') : '';
+  const methods = enabledMethods(platform.payment);
+  if (!sub && methods.length === 0 && payments.length === 0) { b.hidden = true; return; }
+  let h = '<h2>💳 اشتراكك</h2>';
+  if (sub) {
+    const end = sub.endsAt && sub.endsAt.toDate ? sub.endsAt.toDate() : null;
+    const days = end ? Math.ceil((end.getTime() - Date.now()) / 86400000) : null;
+    let state = '🟢 نشط';
+    if (sub.status === 'expired' || (days !== null && days < 0)) state = '⛔ منتهي';
+    else if (sub.status === 'trial') state = '🧪 تجريبي';
+    else if (days !== null && days <= 7) state = '⚠️ قرب ينتهي';
+    const day = end ? end.getFullYear() + '-' + String(end.getMonth() + 1).padStart(2, '0') + '-' + String(end.getDate()).padStart(2, '0') : '';
+    h += '<p><b>' + esc(sub.planName || '') + '</b> — ' + state + '</p>' +
+      (end ? '<p class="muted">ينتهي في ' + day + (days >= 0 ? ' (باقي ' + days + ' يوم)' : '') + '</p>' : '') +
+      (Number(sub.maxProducts) > 0 ? '<p class="muted">المنتجات: ' + products.length + ' / ' + Number(sub.maxProducts) + '</p>' : '');
+  } else h += '<p class="muted">مفيش اشتراك مسجّل لمتجرك.</p>';
+  if (methods.length) {
+    const p = platform.payment || {};
+    h += '<h3 style="margin:.8rem 0 .3rem;font-size:1rem">طرق دفع الاشتراك</h3>' + methods.map(k =>
+      '<div class="paybox"><b>' + esc(methodLabel(k)) + '</b>' + (k === 'link'
+        ? '<a href="' + escA(p.link.url) + '" target="_blank" rel="noopener noreferrer">افتح صفحة الدفع</a>' : esc(instructions(k, p))) + '</div>').join('') +
+      (p.note ? '<p class="muted">' + esc(p.note) + '</p>' : '');
+    const wa = String(platform.whatsapp || '').replace(/\D/g, '');
+    if (wa) {
+      const msg = 'دفعت اشتراك متجر "' + (store ? store.name : '') + '"' + (sub && sub.planName ? ' (باقة ' + sub.planName + ')' : '') + '، وهبعتلكم إثبات الدفع.';
+      h += '<a class="btn btn-sm" style="display:inline-block;margin-top:.5rem" href="https://wa.me/' + wa + '?text=' + encodeURIComponent(msg) + '" target="_blank" rel="noopener">📲 أبلغ بالدفع على واتساب</a>';
+    }
+  }
+  if (payments.length) {
+    const last = [...payments].sort((a, c) => ((c.createdAt && c.createdAt.seconds) || 0) - ((a.createdAt && a.createdAt.seconds) || 0)).slice(0, 5);
+    h += '<h3 style="margin:.8rem 0 .3rem;font-size:1rem">آخر المدفوعات</h3>' + last.map(x =>
+      '<div class="muted" style="font-size:.88rem">' + fmtDate(x.createdAt) + ' — ' + fmtPrice(x.amount) + ' (' + esc(x.method === 'cash' ? 'كاش' : methodLabel(x.method)) + ')' + (x.note ? ' — ' + esc(x.note) : '') + '</div>').join('');
+  }
   b.hidden = false;
-  b.innerHTML = '<h2>💳 اشتراكك</h2><p><b>' + esc(sub.planName || '') + '</b> — ' + state + '</p>' +
-    (end ? '<p class="muted">ينتهي في ' + day + (days >= 0 ? ' (باقي ' + days + ' يوم)' : '') + '</p>' : '') +
-    (Number(sub.maxProducts) > 0 ? '<p class="muted">المنتجات: ' + products.length + ' / ' + Number(sub.maxProducts) + '</p>' : '');
+  b.innerHTML = h;
 }
 
 function renderStats() {
@@ -269,6 +294,13 @@ async function catAction(act, id) {
 }
 
 /* ---------- الطلبات ---------- */
+function payLine(o) {
+  if (!o.paymentMethod) return '';
+  const paid = o.paymentStatus === 'paid';
+  return '<div>' + esc(methodLabel(o.paymentMethod)) + ' — <span class="pill ' + (paid ? 'on' : 'off') + '">' + (paid ? 'اتدفع' : 'لم يُدفع') + '</span> ' +
+    '<button type="button" class="chipbtn" data-pay="' + escA(o.id) + '" data-to="' + (paid ? 'unpaid' : 'paid') + '">' + (paid ? '↩️ لم يُدفع' : '✅ تم الدفع') + '</button></div>';
+}
+
 function renderOrders() {
   const f = $('oFilter').value;
   const list = orders.filter(o => !f || o.status === f);
@@ -281,7 +313,7 @@ function renderOrders() {
       '<select data-oid="' + escA(o.id) + '">' +
       Object.keys(STATUS).map(k => '<option value="' + k + '"' + (o.status === k ? ' selected' : '') + '>' + STATUS[k] + '</option>').join('') + '</select></div>' +
       '<div>👤 ' + esc(o.customerName) + ' — <a href="https://wa.me/' + escA(wa) + '" target="_blank" rel="noopener" dir="ltr">' + esc(o.customerPhone) + '</a></div>' +
-      '<ul>' + items + '</ul><div><b>الإجمالي: ' + fmtPrice(o.total) + '</b></div>' +
+      '<ul>' + items + '</ul><div><b>الإجمالي: ' + fmtPrice(o.total) + '</b></div>' + payLine(o) +
       (o.note ? '<div class="muted">📝 ' + esc(o.note) + '</div>' : '') + '</div>';
   }).join('');
 }
@@ -326,6 +358,7 @@ function fillStoreForm() {
   $('st_cols').value = String((s.theme && s.theme.cols) || 2);
   logoData = s.logo || '';
   showLogo();
+  fillPayForm('pay', s.payment);
 }
 
 async function saveStore(e) {
@@ -336,12 +369,15 @@ async function saveStore(e) {
     const v = $(id).value.trim();
     if (v && !/^https?:\/\//i.test(v)) { toast('الروابط لازم تبدأ بـ https://', true); return; }
   }
+  const pay = readPayForm('pay');
+  if (pay.error) { toast(pay.error, true); return; }
   const data = {
     name: $('st_name').value.trim(), description: $('st_description').value.trim(), whatsapp: wa,
     phone: latinDigits($('st_phone').value.trim()), address: $('st_address').value.trim(),
     instagram: $('st_instagram').value.trim(), facebook: $('st_facebook').value.trim(), tiktok: $('st_tiktok').value.trim(),
     logo: isImageData(logoData) ? logoData : '',
-    theme: { color: $('st_color').value, cols: Number($('st_cols').value) === 3 ? 3 : 2 }
+    theme: { color: $('st_color').value, cols: Number($('st_cols').value) === 3 ? 3 : 2 },
+    payment: pay.value
   };
   if (!data.name) { toast('اكتب اسم المتجر.', true); return; }
   $('st_save').disabled = true;
@@ -353,6 +389,7 @@ async function saveStore(e) {
 /* ---------- تشغيل ---------- */
 guard('store_owner', async (user, r) => {
   initModal();
+  $('pay_form').innerHTML = payFormHtml('pay');
   $('who').textContent = r.profile.displayName || user.email;
   $('logoutBtn').addEventListener('click', logout);
   $('tabs').addEventListener('click', e => {
@@ -371,6 +408,8 @@ guard('store_owner', async (user, r) => {
     }
     storeId = snap.docs[0].id;
   } catch (e) { $('homeBox').innerHTML = '<p class="muted">تعذّر تحميل بيانات المتجر.</p>'; return; }
+
+  try { const ps = await getDoc(doc(db, 'platformSettings', 'main')); platform = ps.exists() ? ps.data() : {}; } catch (e) { /* ignore */ }
 
   $('copyBtn').addEventListener('click', async () => {
     try { await navigator.clipboard.writeText($('catalogLink').value); toast('✅ اتنسخ الرابط'); }
@@ -420,6 +459,12 @@ guard('store_owner', async (user, r) => {
 
   // طلبات
   $('oFilter').addEventListener('change', renderOrders);
+  $('ordersList').addEventListener('click', async e => {
+    const b = e.target.closest('[data-pay]');
+    if (!b) return;
+    try { await updateDoc(doc(db, 'orders', b.dataset.pay), { paymentStatus: b.dataset.to }); toast('✅ تم تحديث حالة الدفع'); }
+    catch (err) { toast(errMsg(err), true); }
+  });
   $('ordersList').addEventListener('change', async e => {
     const s = e.target.closest('select[data-oid]');
     if (!s) return;
@@ -453,6 +498,10 @@ guard('store_owner', async (user, r) => {
     cats = s.docs.map(d => ({ id: d.id, ...d.data() }));
     renderCats(); renderProducts(); renderStats();
   }, loadErr('التصنيفات'));
+  onSnapshot(query(collection(db, 'payments'), where('storeId', '==', storeId), limit(20)), s => {
+    payments = s.docs.map(d => ({ id: d.id, ...d.data({ serverTimestamps: 'estimate' }) }));
+    renderSub();
+  }, () => {});
   onSnapshot(doc(db, 'subscriptions', storeId), s => {
     sub = s.exists() ? s.data({ serverTimestamps: 'estimate' }) : null;
     renderSub();

@@ -79,3 +79,11 @@ label{display:block;margin:.7rem 0 .3rem;color:var(--muted);font-weight:600;font
 .total{display:flex;justify-content:space-between;font-weight:800;font-size:1.1rem;padding:.8rem 0}
 .toast{position:fixed;bottom:5rem;left:50%;transform:translateX(-50%);background:#15803d;color:#fff;padding:.6rem 1.1rem;border-radius:12px;font-weight:700;z-index:70}
 .toast[hidden]{display:none}
+
+/* ===== طرق الدفع ===== */
+.radio{display:flex;flex-direction:column;gap:.4rem}
+.radio label{display:flex;gap:.6rem;align-items:center;border:1.5px solid var(--border);border-radius:12px;padding:.6rem .8rem;margin:0;color:var(--text);font-weight:600;cursor:pointer}
+.radio input{width:auto}
+.radio label.on{border-color:var(--accent);background:rgba(0,0,0,.03)}
+.payinfo{background:var(--bg);border:1px dashed var(--border);border-radius:12px;padding:.7rem .9rem;margin-top:.5rem;font-size:.9rem;word-break:break-word;white-space:pre-line}
+.payinfo a{font-weight:700}

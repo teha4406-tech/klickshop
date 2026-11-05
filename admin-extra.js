@@ -2,6 +2,7 @@
 import { db } from './firebase-config.js';
 import { esc, escA, latinDigits } from './app.js';
 import { isImageData } from './images.js';
+import { PAY_METHODS, methodLabel, payFormHtml, fillPayForm, readPayForm } from './payments.js';
 import {
   collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, writeBatch, query, where, orderBy, limit,
   onSnapshot, getCountFromServer, getAggregateFromServer, sum, count, serverTimestamp, Timestamp
@@ -26,6 +27,8 @@ export function initExtra(ctx) {
   let prods = [];
   let orders = [];
   let period = '30';
+  let payList = [];
+  $('ps_pay_form').innerHTML = payFormHtml('ps', { noCod: true });
 
   /* ---------------- الباقات ---------------- */
   const planFields = p => [
@@ -102,7 +105,7 @@ export function initExtra(ctx) {
       return '<div class="item"><div class="grow"><b>' + esc(s.name) + '</b> <span class="pill ' + st.cls + '">' + st.label + '</span>' +
         '<div class="sub">' + (sub ? esc(sub.planName || '—') + (end ? ' — ينتهي ' + fmtDay(end) + (st.days >= 0 ? ' (باقي ' + st.days + ' يوم)' : '') : '') : 'مفيش اشتراك') + '</div></div>' +
         '<div class="actions"><button type="button" data-act="sub" data-id="' + id + '">✏️ اشتراك</button>' +
-        (sub ? '<button type="button" data-act="renew" data-id="' + id + '">🔁 تجديد</button>' +
+        (sub ? '<button type="button" data-act="pay" data-id="' + id + '">💵 دفعة</button><button type="button" data-act="renew" data-id="' + id + '">🔁 تجديد</button>' +
           '<button type="button" class="danger" data-act="cancel" data-id="' + id + '">🚫 إلغاء</button>' : '') + '</div></div>';
     }).join('');
   }
@@ -132,6 +135,40 @@ export function initExtra(ctx) {
       toast('✅ تم حفظ الاشتراك');
     } catch (e) { toast(errMsg(e), true); }
   }
+  /* ---------------- مدفوعات الاشتراكات ---------------- */
+  const payName = k => k === 'cash' ? '💵 كاش (تسليم باليد)' : methodLabel(k);
+  async function recordPayment(s) {
+    const sub = subs[s.id];
+    if (!sub) { toast('اعمل اشتراك للمتجر الأول.', true); return; }
+    const methods = Object.keys(PAY_METHODS).filter(k => k !== 'cod').map(k => ({ value: k, label: PAY_METHODS[k].label }))
+      .concat([{ value: 'cash', label: 'كاش (تسليم باليد)' }]);
+    const v = await openModal({
+      title: 'تسجيل دفعة: ' + s.name,
+      fields: [
+        { id: 'amount', label: 'المبلغ', type: 'number', value: String(sub.price || ''), required: true },
+        { id: 'method', label: 'طريقة الدفع', type: 'select', value: 'instapay', options: methods },
+        { id: 'note', label: 'ملاحظة / رقم العملية (اختياري)', value: '' },
+        { id: 'renew', label: 'تجديد الاشتراك بعد التسجيل؟', type: 'select', value: '1', options: [{ value: '1', label: 'أيوه، جدّد' }, { value: '0', label: 'لأ' }] }
+      ],
+      validate: v => !(Number(v.amount) > 0) ? 'المبلغ لازم يكون أكبر من صفر.' : ''
+    });
+    if (!v) return;
+    try {
+      await setDoc(doc(collection(db, 'payments')), {
+        storeId: s.id, storeName: s.name, planName: sub.planName || '', amount: Number(v.amount),
+        method: v.method, note: v.note.slice(0, 200), createdAt: serverTimestamp()
+      });
+      if (v.renew === '1') await renewSub(s);
+      toast('✅ تم تسجيل الدفعة');
+    } catch (e) { toast(errMsg(e), true); }
+  }
+  function renderPayList() {
+    $('payList').innerHTML = payList.length === 0 ? '<p class="muted">مفيش مدفوعات متسجّلة.</p>' : payList.map(p =>
+      '<div class="item"><div class="grow"><b>' + esc(p.storeName || p.storeId) + '</b> — ' + fmtPrice(p.amount) +
+      '<div class="sub">' + esc(payName(p.method)) + ' • ' + fmtDateTime(p.createdAt) + (p.note ? ' • ' + esc(p.note) : '') + '</div></div>' +
+      '<div class="actions"><button type="button" class="danger" data-del="' + escA(p.id) + '">🗑️</button></div></div>').join('');
+  }
+
   async function cancelSub(s) {
     const sub = subs[s.id];
     if (!sub) return;
@@ -220,6 +257,12 @@ export function initExtra(ctx) {
       $('oHint').hidden = false;
     }
   }
+  function payLine(o) {
+    if (!o.paymentMethod) return '';
+    const paid = o.paymentStatus === 'paid';
+    return '<div>' + esc(methodLabel(o.paymentMethod)) + ' — <span class="pill ' + (paid ? 'on' : 'off') + '">' + (paid ? 'اتدفع' : 'لم يُدفع') + '</span> ' +
+      '<button type="button" class="chipbtn" data-pay="' + escA(o.id) + '" data-to="' + (paid ? 'unpaid' : 'paid') + '">' + (paid ? '↩️ لم يُدفع' : '✅ تم الدفع') + '</button></div>';
+  }
   function renderOrders() {
     const f = $('oStatus').value;
     const list = orders.filter(o => !f || o.status === f);
@@ -231,7 +274,7 @@ export function initExtra(ctx) {
       return '<div class="ocard"><div class="head"><b>#' + esc(o.id.slice(-6)) + ' — ' + esc(names[o.storeId] || o.storeId) + '</b><span class="muted">' + fmtDateTime(o.createdAt) + '</span>' +
         '<select data-oid="' + id + '">' + Object.keys(STATUS).map(k => '<option value="' + k + '"' + (o.status === k ? ' selected' : '') + '>' + STATUS[k] + '</option>').join('') + '</select></div>' +
         '<div>👤 ' + esc(o.customerName) + ' — <span dir="ltr">' + esc(o.customerPhone) + '</span></div><ul>' + items + '</ul>' +
-        '<div><b>' + fmtPrice(o.total) + '</b></div><div class="actions" style="margin-top:.4rem"><button type="button" class="danger" data-del="' + id + '">🗑️ حذف الطلب</button></div></div>';
+        '<div><b>' + fmtPrice(o.total) + '</b></div>' + payLine(o) + '<div class="actions" style="margin-top:.4rem"><button type="button" class="danger" data-del="' + id + '">🗑️ حذف الطلب</button></div></div>';
     }).join('');
   }
 
@@ -248,6 +291,8 @@ export function initExtra(ctx) {
     try {
       const q = since ? query(col, where('createdAt', '>=', Timestamp.fromDate(since))) : col;
       const agg = (await getAggregateFromServer(q, { n: count(), total: sum('total') })).data();
+      const pq = since ? query(collection(db, 'payments'), where('createdAt', '>=', Timestamp.fromDate(since))) : collection(db, 'payments');
+      const pagg = (await getAggregateFromServer(pq, { total: sum('amount') })).data();
       const sc = await Promise.all(Object.keys(STATUS).map(async k => [k, (await getCountFromServer(query(col, where('status', '==', k)))).data().count]));
       const stores = getStores();
       const rows = await Promise.all(stores.map(async s => {
@@ -262,7 +307,8 @@ export function initExtra(ctx) {
       $('rStats').innerHTML = box(Number(agg.n).toLocaleString('ar-EG'), 'طلبات الفترة') + box(fmtPrice(agg.total || 0), 'قيمة طلبات الفترة') +
         box(stores.filter(s => s.active).length + ' / ' + stores.length, 'متاجر شغّالة') +
         box(subList.filter(x => x.cls === 'warn' && x.label === 'قرب ينتهي').length, 'اشتراكات قربت تنتهي') +
-        box(subList.filter(x => x.label === 'منتهي').length, 'اشتراكات منتهية');
+        box(subList.filter(x => x.label === 'منتهي').length, 'اشتراكات منتهية') +
+        box(fmtPrice(pagg.total || 0), 'إيرادات الاشتراكات (الفترة)');
       $('rStatus').textContent = 'كل الطلبات حسب الحالة: ' + sc.map(([k, n]) => STATUS[k] + ' ' + n).join(' • ');
       const max = Math.max(1, ...rows.map(r => r.total));
       $('rStores').innerHTML = rows.length === 0 ? '<p class="muted">مفيش متاجر.</p>' : rows.sort((a, b) => b.total - a.total).map(r =>
@@ -286,15 +332,18 @@ export function initExtra(ctx) {
       $('ps_whatsapp').value = d.whatsapp || '';
       $('ps_email').value = d.email || '';
       $('ps_currency').value = d.currency || '';
+      fillPayForm('ps', d.payment);
     } catch (e) { toast('تعذّر تحميل الإعدادات.', true); }
   }
   async function saveSettings() {
     const wa = latinDigits($('ps_whatsapp').value).replace(/\D/g, '');
     if (wa && !/^\d{8,15}$/.test(wa)) { toast('رقم الواتساب لازم 8 لـ 15 رقم بالكود الدولي.', true); return; }
+    const pay = readPayForm('ps');
+    if (pay.error) { toast(pay.error, true); return; }
     try {
       await setDoc(doc(db, 'platformSettings', 'main'), {
         name: $('ps_name').value.trim(), tagline: $('ps_tagline').value.trim(), whatsapp: wa,
-        email: $('ps_email').value.trim(), currency: $('ps_currency').value.trim(), updatedAt: serverTimestamp()
+        email: $('ps_email').value.trim(), currency: $('ps_currency').value.trim(), payment: pay.value, updatedAt: serverTimestamp()
       }, { merge: true });
       toast('✅ تم حفظ إعدادات المنصة');
     } catch (e) { toast(errMsg(e), true); }
@@ -316,6 +365,17 @@ export function initExtra(ctx) {
     renderSubs();
   }, () => toast('تعذّر تحميل الاشتراكات.', true));
 
+  onSnapshot(query(collection(db, 'payments'), orderBy('createdAt', 'desc'), limit(30)), s => {
+    payList = s.docs.map(d => ({ id: d.id, ...d.data({ serverTimestamps: 'estimate' }) }));
+    renderPayList();
+  }, () => toast('تعذّر تحميل المدفوعات.', true));
+  $('payList').addEventListener('click', async e => {
+    const b = e.target.closest('[data-del]');
+    if (!b) return;
+    const v = await openModal({ title: 'حذف الدفعة', danger: true, okText: 'احذف', message: 'هتتحذف الدفعة من السجل (مش بتأثر على الاشتراك).' });
+    if (!v) return;
+    try { await deleteDoc(doc(db, 'payments', b.dataset.del)); toast('🗑️ تم الحذف'); } catch (err) { toast(errMsg(err), true); }
+  });
   $('addPlanBtn').addEventListener('click', addPlan);
   $('plansList').addEventListener('click', e => { const b = e.target.closest('[data-act]'); if (b) planAction(b.dataset.act, b.dataset.id); });
   $('subsList').addEventListener('click', e => {
@@ -325,6 +385,7 @@ export function initExtra(ctx) {
     if (!s) return;
     if (b.dataset.act === 'renew') renewSub(s);
     else if (b.dataset.act === 'cancel') cancelSub(s);
+    else if (b.dataset.act === 'pay') recordPayment(s);
     else editSub(s);
   });
   $('aStore').addEventListener('change', loadProducts);
@@ -339,6 +400,17 @@ export function initExtra(ctx) {
     catch (err) { toast(errMsg(err), true); renderOrders(); }
   });
   $('aOrders').addEventListener('click', async e => {
+    const pb = e.target.closest('[data-pay]');
+    if (pb) {
+      try {
+        await updateDoc(doc(db, 'orders', pb.dataset.pay), { paymentStatus: pb.dataset.to });
+        const o = orders.find(x => x.id === pb.dataset.pay);
+        if (o) o.paymentStatus = pb.dataset.to;
+        renderOrders();
+        toast('✅ تم تحديث حالة الدفع');
+      } catch (err) { toast(errMsg(err), true); }
+      return;
+    }
     const b = e.target.closest('[data-del]');
     if (!b) return;
     const v = await openModal({ title: 'حذف الطلب', danger: true, okText: 'احذف', message: 'هيتحذف الطلب نهائيًا.' });

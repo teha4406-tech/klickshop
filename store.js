@@ -2,6 +2,7 @@
 import { db } from './firebase-config.js';
 import { esc, escA, latinDigits } from './app.js';
 import { isImageData } from './images.js';
+import { enabledMethods, instructions, methodLabel, isHttps } from './payments.js';
 import {
   doc, getDoc, getDocs, setDoc, collection, query, where, limit, serverTimestamp
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
@@ -28,6 +29,7 @@ let cats = [];
 let products = [];
 let cart = [];
 let activeCat = '';
+let payKey = '';
 let cur = null;
 const imgCache = new Map();
 
@@ -68,7 +70,7 @@ async function loadData() {
     t: Date.now(),
     store: {
       name: s.name, description: s.description, whatsapp: s.whatsapp, phone: s.phone, address: s.address,
-      instagram: s.instagram, facebook: s.facebook, tiktok: s.tiktok, logo: s.logo, theme: s.theme
+      instagram: s.instagram, facebook: s.facebook, tiktok: s.tiktok, logo: s.logo, theme: s.theme, payment: s.payment || {}
     },
     cats: cSnap.docs.map(d => ({ id: d.id, name: d.data().name, order: d.data().order || 0 })),
     products: pSnap.docs.map(d => {
@@ -228,7 +230,28 @@ function openCart() {
     if (!$('cPhone').value) $('cPhone').value = String(c.p || '');
   } catch (e) { /* ignore */ }
   renderCart();
+  renderPay();
   $('cOv').hidden = false;
+}
+
+/* ---------- طرق الدفع ---------- */
+function payInfoHtml(k) {
+  if (!k) return '';
+  const p = store.payment || {};
+  let h = esc(instructions(k, p));
+  if (k === 'link' && p.link && isHttps(p.link.url)) h = 'ادفع أونلاين: <a href="' + escA(p.link.url) + '" target="_blank" rel="noopener noreferrer">افتح صفحة الدفع</a>';
+  if (p.note) h += '<br>' + esc(p.note);
+  return h;
+}
+function renderPay() {
+  const keys = enabledMethods(store.payment);
+  $('cPayBox').hidden = keys.length === 0;
+  if (!keys.includes(payKey)) payKey = keys.length === 1 ? keys[0] : '';
+  $('cPayList').innerHTML = keys.map(k =>
+    '<label class="' + (payKey === k ? 'on' : '') + '"><input type="radio" name="pay" value="' + k + '"' + (payKey === k ? ' checked' : '') + '> ' + esc(methodLabel(k)) + '</label>').join('');
+  const h = payInfoHtml(payKey);
+  $('cPayInfo').innerHTML = h;
+  $('cPayInfo').hidden = !h;
 }
 
 function buildMessage(orderNo, name, phone, note) {
@@ -238,6 +261,7 @@ function buildMessage(orderNo, name, phone, note) {
   cart.forEach((i, n) => lines.push((n + 1) + ') ' + i.name + (i.size ? ' — مقاس ' + i.size : '') + (i.color ? ' — لون ' + i.color : '') +
     ' × ' + i.qty + ' = ' + fmtPrice(i.price * i.qty)));
   lines.push('', '💰 الإجمالي: ' + fmtPrice(cartTotal()));
+  if (payKey) lines.push('💳 طريقة الدفع: ' + methodLabel(payKey) + (payKey === 'cod' || payKey === 'link' ? '' : ' (هبعتلك صورة التحويل)'));
   if (note) lines.push('📝 ملاحظات: ' + note);
   return lines.join('\n');
 }
@@ -253,6 +277,7 @@ async function sendOrder() {
   if (name.length < 2) return err('اكتب اسمك.');
   if (!/^[0-9+\s-]{6,20}$/.test(phone)) return err('اكتب رقم موبايل صحيح.');
   if (!wa) return err('رقم واتساب المتجر مش متاح حاليًا.');
+  if (enabledMethods(store.payment).length && !payKey) return err('اختار طريقة الدفع.');
   if (Date.now() - (Number(ls.get('kc:last')) || 0) < 15000) return err('استنى ثواني وحاول تاني.');
 
   $('sendBtn').disabled = true;
@@ -264,7 +289,7 @@ async function sendOrder() {
     await setDoc(ref, {
       storeId: slug, customerName: name.slice(0, 80), customerPhone: phone,
       items: cart.map(i => ({ productId: i.productId, name: i.name, price: i.price, qty: i.qty, size: i.size, color: i.color })),
-      total, ...(note ? { note: note.slice(0, 500) } : {}), status: 'new', createdAt: serverTimestamp()
+      total, ...(note ? { note: note.slice(0, 500) } : {}), status: 'new', paymentMethod: payKey || 'cod', paymentStatus: 'unpaid', createdAt: serverTimestamp()
     });
     orderNo = ref.id.slice(-6);
   } catch (e) { orderNo = ''; /* الطلب هيتبعت لواتساب حتى لو التسجيل فشل */ }
@@ -279,6 +304,8 @@ async function sendOrder() {
   $('cBody').hidden = true;
   $('cDone').hidden = false;
   $('cDoneMsg').textContent = (orderNo ? 'تم تسجيل طلبك رقم #' + orderNo + '. ' : 'جهّزنا طلبك. ') + 'هنفتحلك واتساب عشان تبعته لصاحب المحل.';
+  $('cDonePay').innerHTML = payInfoHtml(payKey);
+  $('cDonePay').hidden = !payKey;
   $('waAgain').href = url;
   setTimeout(() => { location.href = url; }, 400);
 }
@@ -355,6 +382,7 @@ async function init() {
     renderCart();
   });
   $('sendBtn').addEventListener('click', sendOrder);
+  $('cPayList').addEventListener('change', e => { const r = e.target.closest('input[name="pay"]'); if (r) { payKey = r.value; renderPay(); } });
   document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeProduct(); $('cOv').hidden = true; } });
 }
 init();

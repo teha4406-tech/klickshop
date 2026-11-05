@@ -62,7 +62,8 @@ service cloud.firestore {
     }
 
     function validOrder(d) {
-      return d.keys().hasOnly(['storeId', 'customerName', 'customerPhone', 'items', 'total', 'note', 'status', 'createdAt'])
+      return d.keys().hasOnly(['storeId', 'customerName', 'customerPhone', 'items', 'total', 'note', 'status', 'createdAt',
+                               'paymentMethod', 'paymentStatus'])
         && d.keys().hasAll(['storeId', 'customerName', 'customerPhone', 'items', 'total', 'status', 'createdAt'])
         && d.storeId is string
         && d.customerName is string && d.customerName.size() > 0 && d.customerName.size() <= 80
@@ -71,6 +72,8 @@ service cloud.firestore {
         && d.total is number && d.total >= 0
         && d.get('note', '').size() <= 500
         && d.status == 'new'
+        && d.get('paymentMethod', 'cod') in ['cod', 'instapay', 'wallet', 'bank', 'link']
+        && d.get('paymentStatus', 'unpaid') == 'unpaid'
         && d.createdAt == request.time;
     }
 
@@ -103,7 +106,7 @@ service cloud.firestore {
             // صاحب المحل يعدّل بيانات العرض بس، مش ownerUid ولا active ولا slug ولا الباقة
             && request.resource.data.diff(resource.data).affectedKeys()
                  .hasOnly(['name', 'description', 'whatsapp', 'phone', 'address',
-                           'instagram', 'facebook', 'tiktok', 'logo', 'theme']));
+                           'instagram', 'facebook', 'tiktok', 'logo', 'theme', 'payment']));
     }
 
     // ================= التصنيفات =================
@@ -157,8 +160,9 @@ service cloud.firestore {
       // صاحب المتجر يغيّر حالة الطلب بس
       allow update: if isSuperAdmin()
         || (ownsStore(resource.data.storeId)
-            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
-            && request.resource.data.status in ['new', 'confirmed', 'shipped', 'delivered', 'cancelled']);
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'paymentStatus'])
+            && request.resource.data.status in ['new', 'confirmed', 'shipped', 'delivered', 'cancelled']
+            && request.resource.data.get('paymentStatus', 'unpaid') in ['unpaid', 'paid']);
       allow delete: if isSuperAdmin();
     }
 
@@ -170,6 +174,13 @@ service cloud.firestore {
     match /subscriptions/{storeId} {
       allow read: if isSuperAdmin()
         || (signedIn() && storeExists(storeId) && storeOf(storeId).ownerUid == request.auth.uid);
+      allow write: if isSuperAdmin();
+    }
+    // مدفوعات اشتراكات المتاجر (المدير العام بس يسجّل، وصاحب المتجر يقرا مدفوعاته)
+    match /payments/{id} {
+      allow read: if isSuperAdmin()
+        || (signedIn() && storeExists(resource.data.get('storeId', 'x'))
+            && storeOf(resource.data.get('storeId', 'x')).ownerUid == request.auth.uid);
       allow write: if isSuperAdmin();
     }
     match /platformSettings/{docId} {

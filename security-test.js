@@ -55,6 +55,10 @@ async function adminSuite(user) {
     await deleteDoc(doc(db, 'platformSettings', 'zz-test'));
   });
   await T('قراءة الباقات (عام)', true, () => getDocs(query(collection(db, 'plans'), limit(1))));
+  await T('تسجيل دفعة ثم حذفها', true, async () => {
+    await setDoc(doc(db, 'payments', 'zz-rules-test'), { storeId: 'zz', amount: 1, createdAt: serverTimestamp() });
+    await deleteDoc(doc(db, 'payments', 'zz-rules-test'));
+  });
 }
 
 async function ownerSuite(user) {
@@ -83,6 +87,8 @@ async function ownerSuite(user) {
   await T('قراءة تصنيفات متجري', true, () => getDocs(query(collection(db, 'categories'), where('storeId', '==', mineId), limit(1))));
   await T('كتابة في الباقات', false, () => setDoc(doc(db, 'plans', 'zz-test'), { x: 1 }));
   await T('كتابة في إعدادات المنصة', false, () => setDoc(doc(db, 'platformSettings', 'zz-test'), { x: 1 }));
+  await T('تسجيل دفعة اشتراك (للمدير بس)', false, () => setDoc(doc(db, 'payments', 'zz-test'), { storeId: mineId, amount: 1 }));
+  await T('تعديل طرق الدفع لمتجري', true, () => updateDoc(doc(db, 'stores', mineId), { payment: mine.data().payment || {} }));
 
   // منتج في متجري: إضافة وتعديل وحذف
   const pRef = doc(collection(db, 'products'));
@@ -149,6 +155,8 @@ async function guestSuite() {
   await T('طلب بوقت مزيف (مش وقت السيرفر)', false, () => setDoc(doc(collection(g, 'orders')), order({ createdAt: new Date() })));
   await T('طلب لمتجر مش موجود', false, () => setDoc(doc(collection(g, 'orders')), order({ storeId: 'zz-not-exist' })));
   await T('طلب بحقل زيادة مش مسموح', false, () => setDoc(doc(collection(g, 'orders')), order({ hacked: true })));
+  await T('طلب بطريقة دفع غير معروفة', false, () => setDoc(doc(collection(g, 'orders')), order({ paymentMethod: 'bitcoin' })));
+  await T('طلب معلّم إنه مدفوع من الزائر', false, () => setDoc(doc(collection(g, 'orders')), order({ paymentStatus: 'paid' })));
 }
 
 $('guestBtn').addEventListener('click', async () => {
